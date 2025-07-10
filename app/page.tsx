@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { Language, LanguagePair } from '@/lib/types';
+import { Language } from '@/lib/types';
 import { Mic, Type, MessageSquare, History } from 'lucide-react';
 
 const languages: { code: Language; name: string; flag: string }[] = [
@@ -13,7 +13,7 @@ const languages: { code: Language; name: string; flag: string }[] = [
 
 export default function Home() {
   const router = useRouter();
-  const { currentLanguagePair, setLanguagePair, fontSize } = useStore();
+  const { currentLanguagePair, setLanguagePair } = useStore();
 
   const handleLanguageSwap = () => {
     setLanguagePair({
@@ -22,139 +22,91 @@ export default function Home() {
     });
   };
 
-  const selectLanguage = (type: 'from' | 'to', lang: Language) => {
-    const newPair: LanguagePair = {
+  const selectNextLanguage = (type: 'from' | 'to') => {
+    const current = currentLanguagePair[type];
+    const availableLangs = type === 'to' 
+      ? languages.filter(l => l.code !== currentLanguagePair.from)
+      : languages;
+    const currentIndex = availableLangs.findIndex(l => l.code === current);
+    const nextLang = availableLangs[(currentIndex + 1) % availableLangs.length];
+    
+    setLanguagePair({
       ...currentLanguagePair,
-      [type]: lang,
-    };
-    
-    // Ensure from and to are different
-    if (newPair.from === newPair.to) {
-      const otherLangs = languages.filter(l => l.code !== lang);
-      newPair[type === 'from' ? 'to' : 'from'] = otherLangs[0].code;
-    }
-    
-    setLanguagePair(newPair);
+      [type]: nextLang.code,
+    });
   };
 
-  const fontSizeClass = fontSize === 'elderly' ? 'text-elderly' : fontSize === 'large' ? 'text-xl' : 'text-base';
+  const fromLang = languages.find(l => l.code === currentLanguagePair.from)!;
+  const toLang = languages.find(l => l.code === currentLanguagePair.to)!;
 
   return (
-    <main className={`flex min-h-screen flex-col items-center p-4 ${fontSizeClass}`}>
-      <h1 className="text-3xl font-bold mb-8 text-center">TravelSpeak Family</h1>
+    <main className="flex min-h-screen flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-white">
+      <h1 className="text-5xl font-bold mb-8 text-center text-blue-700">
+        🌍 TravelSpeak
+      </h1>
       
-      {/* Language selector */}
-      <div className="w-full max-w-md mb-8">
-        <div className="flex items-center justify-between mb-4">
-          {/* From language */}
-          <div className="flex-1">
-            <p className="text-sm text-gray-600 mb-2 text-center">Z języka:</p>
-            <div className="flex justify-center gap-2">
-              {languages.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => selectLanguage('from', lang.code)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    currentLanguagePair.from === lang.code
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-300'
-                  }`}
-                >
-                  <span className="flag-emoji">{lang.flag}</span>
-                  <p className="text-sm mt-1">{lang.name}</p>
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Language selector - SIMPLIFIED */}
+      <div className="w-full max-w-2xl mb-8 bg-white p-6 rounded-3xl shadow-xl">
+        <div className="flex items-center justify-around">
+          <button
+            onClick={() => selectNextLanguage('from')}
+            className="text-center p-4 rounded-2xl bg-blue-50 hover:bg-blue-100 transition-all active:scale-95"
+          >
+            <p className="text-xl font-bold text-gray-700 mb-2">Z języka:</p>
+            <span className="text-7xl block mb-2">{fromLang.flag}</span>
+            <p className="text-2xl font-bold">{fromLang.name}</p>
+          </button>
           
-          {/* Swap button */}
           <button
             onClick={handleLanguageSwap}
-            className="mx-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Zamień języki"
+            className="p-6 text-5xl rounded-full bg-gray-100 hover:bg-gray-200 transition-all active:scale-95"
           >
             ↔️
           </button>
           
-          {/* To language */}
-          <div className="flex-1">
-            <p className="text-sm text-gray-600 mb-2 text-center">Na język:</p>
-            <div className="flex justify-center gap-2">
-              {languages
-                .filter((lang) => lang.code !== currentLanguagePair.from)
-                .map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => selectLanguage('to', lang.code)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      currentLanguagePair.to === lang.code
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-300'
-                    }`}
-                  >
-                    <span className="flag-emoji">{lang.flag}</span>
-                    <p className="text-sm mt-1">{lang.name}</p>
-                  </button>
-                ))}
-            </div>
-          </div>
+          <button
+            onClick={() => selectNextLanguage('to')}
+            className="text-center p-4 rounded-2xl bg-green-50 hover:bg-green-100 transition-all active:scale-95"
+          >
+            <p className="text-xl font-bold text-gray-700 mb-2">Na język:</p>
+            <span className="text-7xl block mb-2">{toLang.flag}</span>
+            <p className="text-2xl font-bold">{toLang.name}</p>
+          </button>
         </div>
       </div>
       
-      {/* Main action buttons */}
-      <div className="w-full max-w-md space-y-4">
+      {/* Main action buttons - BIGGER AND CLEARER */}
+      <div className="w-full max-w-2xl space-y-6">
         <button
           onClick={() => router.push('/translate/voice')}
-          className="btn-primary btn-large w-full"
+          className="w-full bg-red-600 text-white rounded-3xl p-8 flex items-center justify-center shadow-2xl hover:bg-red-700 active:scale-95 transition-all"
         >
-          <Mic className="mr-3" size={32} />
-          MÓWIENIE
+          <Mic size={48} className="mr-4" />
+          <span className="text-4xl font-bold">🎤 MÓWIĘ</span>
         </button>
         
         <button
           onClick={() => router.push('/translate/text')}
-          className="btn-primary w-full"
+          className="w-full bg-blue-600 text-white rounded-3xl p-6 flex items-center justify-center shadow-xl hover:bg-blue-700 active:scale-95 transition-all"
         >
-          <Type className="mr-3" size={28} />
-          PISANIE
+          <Type size={40} className="mr-4" />
+          <span className="text-3xl font-bold">⌨️ PISZĘ</span>
         </button>
         
         <button
           onClick={() => router.push('/phrases')}
-          className="btn-secondary w-full"
+          className="w-full bg-green-600 text-white rounded-3xl p-6 flex items-center justify-center shadow-xl hover:bg-green-700 active:scale-95 transition-all"
         >
-          <MessageSquare className="mr-3" size={28} />
-          GOTOWE ZWROTY
+          <MessageSquare size={40} className="mr-4" />
+          <span className="text-3xl font-bold">💬 ZWROTY (BEZ NETU!)</span>
         </button>
         
         <button
           onClick={() => router.push('/history')}
-          className="btn-secondary w-full"
+          className="w-full bg-gray-600 text-white rounded-3xl p-5 flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition-all"
         >
-          <History className="mr-3" size={28} />
-          HISTORIA
-        </button>
-      </div>
-      
-      {/* Font size selector */}
-      <div className="mt-8 flex gap-2">
-        <button
-          onClick={() => useStore.getState().setFontSize('normal')}
-          className={`px-3 py-1 rounded ${fontSize === 'normal' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-        >
-          A
-        </button>
-        <button
-          onClick={() => useStore.getState().setFontSize('large')}
-          className={`px-3 py-1 rounded text-lg ${fontSize === 'large' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-        >
-          A
-        </button>
-        <button
-          onClick={() => useStore.getState().setFontSize('elderly')}
-          className={`px-3 py-1 rounded text-xl ${fontSize === 'elderly' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-        >
-          A
+          <History size={36} className="mr-4" />
+          <span className="text-2xl font-bold">📜 HISTORIA</span>
         </button>
       </div>
     </main>

@@ -110,43 +110,48 @@ export default function VoiceRecorder({ onRecordingComplete, isProcessing = fals
       <button
         onClick={handleButtonClick}
         disabled={isProcessing}
-        className={`relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 ${
+        className={`relative w-48 h-48 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
           isRecording
-            ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+            ? 'bg-red-600 hover:bg-red-700 animate-pulse scale-110'
             : isProcessing
             ? 'bg-gray-400'
-            : 'bg-blue-600 hover:bg-blue-700'
+            : 'bg-red-600 hover:bg-red-700 hover:scale-105'
         }`}
         aria-label={isRecording ? 'Zatrzymaj nagrywanie' : 'Rozpocznij nagrywanie'}
       >
         {isProcessing ? (
-          <Loader2 className="w-16 h-16 text-white animate-spin" />
+          <Loader2 className="w-24 h-24 text-white animate-spin" />
         ) : isRecording ? (
-          <MicOff className="w-16 h-16 text-white" />
+          <MicOff className="w-24 h-24 text-white" />
         ) : (
-          <Mic className="w-16 h-16 text-white" />
+          <Mic className="w-24 h-24 text-white" />
         )}
       </button>
       
       {isRecording && (
-        <div className="mt-4 text-center">
-          <p className="text-lg font-semibold">{formatTime(recordingTime)}</p>
-          <p className="text-sm text-gray-600">
+        <div className="mt-6 text-center bg-red-50 p-4 rounded-2xl">
+          <p className="text-3xl font-bold text-red-700">{formatTime(recordingTime)}</p>
+          <p className="text-lg text-red-600">
             Maksymalnie {API_LIMITS.speechRecordingMaxSeconds} sekund
           </p>
         </div>
       )}
       
       {!isRecording && !isProcessing && (
-        <p className="mt-4 text-lg text-gray-600">Naciśnij i mów</p>
+        <div className="mt-6 text-center">
+          <p className="text-3xl font-bold text-gray-700">Naciśnij i mów</p>
+          <p className="text-lg text-gray-500 mt-2">Mów wyraźnie do mikrofonu</p>
+        </div>
       )}
       
       {isProcessing && (
-        <p className="mt-4 text-lg text-gray-600">Przetwarzanie...</p>
+        <p className="mt-6 text-2xl font-bold text-gray-600 animate-pulse">Przetwarzanie...</p>
       )}
       
       {error && (
-        <p className="mt-4 text-red-600 text-center">{error}</p>
+        <div className="mt-6 bg-red-100 p-4 rounded-2xl">
+          <p className="text-xl text-red-700 font-semibold text-center">⚠️ {error}</p>
+        </div>
       )}
     </div>
   );

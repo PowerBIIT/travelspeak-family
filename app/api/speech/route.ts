@@ -12,17 +12,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock transcription
-    // TODO: Integrate with AssemblyAI API when API key is provided
-    const mockText = 'Dzień dobry, czy jest wolny stolik?';
-
-    // When AssemblyAI API key is available, use this:
-    /*
     const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY;
     
     if (!ASSEMBLYAI_API_KEY) {
-      console.warn('AssemblyAI API key not configured, using mock transcription');
-      return NextResponse.json({ text: mockText });
+      console.warn('AssemblyAI API key not configured');
+      return NextResponse.json({ 
+        text: '[Brak klucza API AssemblyAI]',
+        error: 'Brak konfiguracji AssemblyAI API' 
+      });
     }
 
     // Convert base64 to buffer
@@ -100,9 +97,6 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ text: transcript.text });
-    */
-
-    return NextResponse.json({ text: mockText });
   } catch (error) {
     console.error('Speech-to-text error:', error);
     return NextResponse.json(

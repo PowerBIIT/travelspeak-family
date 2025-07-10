@@ -38,37 +38,40 @@ export default function TranslationDisplay({
   };
 
   return (
-    <div className="w-full max-w-2xl space-y-4">
+    <div className="w-full max-w-2xl space-y-6">
       {/* Original text */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <div className="flex items-center mb-2">
-          <span className="text-2xl mr-2">{getLanguageFlag(fromLang)}</span>
-          <span className="text-sm text-gray-600">Oryginał</span>
+      <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-200">
+        <div className="flex items-center mb-3">
+          <span className="text-4xl mr-3">{getLanguageFlag(fromLang)}</span>
+          <span className="text-xl font-semibold text-gray-700">Powiedziałeś:</span>
         </div>
-        <p className="text-lg">{originalText}</p>
+        <p className="text-2xl text-gray-800">{originalText}</p>
       </div>
 
       {/* Divider */}
       <div className="flex justify-center">
-        <div className="text-2xl">↓</div>
+        <div className="text-4xl animate-bounce">⬇️</div>
       </div>
 
       {/* Translated text */}
-      <div className="bg-blue-50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-2xl p-6 shadow-xl border-2 border-blue-300">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center">
-            <span className="text-2xl mr-2">{getLanguageFlag(toLang)}</span>
-            <span className="text-sm text-gray-600">Tłumaczenie</span>
+            <span className="text-4xl mr-3">{getLanguageFlag(toLang)}</span>
+            <span className="text-xl font-semibold text-blue-800">Tłumaczenie:</span>
           </div>
           <button
             onClick={handleCopy}
-            className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-3 bg-white rounded-xl hover:bg-gray-100 transition-all shadow-md active:scale-95"
             aria-label="Kopiuj tłumaczenie"
           >
-            {copied ? <Check size={20} className="text-green-600" /> : <Copy size={20} />}
+            {copied ? <Check size={28} className="text-green-600" /> : <Copy size={28} />}
           </button>
         </div>
-        <p className="text-lg font-semibold">{translatedText}</p>
+        <p className="text-3xl font-bold text-blue-900">{translatedText}</p>
+        {copied && (
+          <p className="text-sm text-green-600 mt-2 font-semibold">✓ Skopiowane!</p>
+        )}
       </div>
     </div>
   );
