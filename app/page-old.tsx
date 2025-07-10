@@ -185,139 +185,130 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
       <div className="absolute inset-0 bg-black/20"></div>
       
-      <div className="relative z-10 w-full max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-6xl md:text-7xl font-bold mb-2 text-white drop-shadow-2xl">
-            TravelSpeak
-          </h1>
-          <p className="text-white/80 text-lg">v3.0</p>
-        </div>
-
-        {/* Language Selector */}
-        <div className="mb-12">
-          <button
-            onClick={cycleLanguage}
-            className="mx-auto flex items-center gap-4 bg-white/20 backdrop-blur-md rounded-full px-8 py-4 hover:bg-white/30 transition-all"
+      <div className="relative z-10 max-w-2xl mx-auto text-center">
+        <h1 className="text-7xl font-bold mb-2 text-white drop-shadow-2xl">
+          TravelSpeak
+        </h1>
+        <p className="text-white/80 text-lg mb-12">v3.0</p>
+      
+      {/* Language swap button */}
+      <button
+        onClick={swapLanguages}
+        className="mb-8 p-4 bg-white/20 backdrop-blur rounded-full text-5xl hover:bg-white/30 transition-all active:scale-95"
+      >
+        ↔️
+      </button>
+      
+      {/* Two speaker buttons */}
+      <div className="flex gap-8 w-full max-w-4xl">
+        {/* Source language button */}
+        <button
+          onMouseDown={() => startRecording('source')}
+          onMouseUp={stopRecording}
+          onTouchStart={() => startRecording('source')}
+          onTouchEnd={stopRecording}
+          disabled={isTranslating || isRecording === 'target'}
+          className={`flex-1 aspect-square rounded-3xl flex flex-col items-center justify-center transition-all transform ${
+            isRecording === 'source' 
+              ? 'bg-red-600 scale-95 shadow-inner' 
+              : 'bg-white shadow-2xl hover:scale-105 active:scale-95'
+          } ${isTranslating ? 'opacity-50' : ''}`}
+        >
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleLanguage(sourceLang, true);
+            }}
+            className="cursor-pointer hover:scale-110 transition-transform"
           >
-            <span className="text-5xl">{languages[activeLang].flag}</span>
-            <div className="text-left">
-              <p className="text-white text-sm opacity-80">Mówię po</p>
-              <p className="text-white text-2xl font-bold">{languages[activeLang].name}</p>
-            </div>
-          </button>
-        </div>
-
-        {/* Main Record Button */}
-        <div className="relative mb-12">
-          <button
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
-            disabled={isTranslating}
-            className={`mx-auto flex relative w-48 h-48 md:w-56 md:h-56 rounded-full transition-all ${
-              isRecording 
-                ? 'bg-red-500 scale-110' 
-                : 'bg-white hover:scale-105'
-            } ${isTranslating ? 'opacity-50' : ''}`}
+            <span className="text-8xl mb-4 block">{languages[sourceLang].flag}</span>
+            <p className="text-3xl font-bold mb-2">{languages[sourceLang].name}</p>
+          </div>
+          {isRecording === 'source' ? (
+            <>
+              <Square size={64} className="text-white animate-pulse" />
+              <p className="text-xl text-white mt-2">Nagrywam...</p>
+            </>
+          ) : (
+            <>
+              <Mic size={64} className="text-gray-700" />
+              <p className="text-xl text-gray-600 mt-2">Przytrzymaj i mów</p>
+            </>
+          )}
+        </button>
+        
+        {/* Target language button */}
+        <button
+          onMouseDown={() => startRecording('target')}
+          onMouseUp={stopRecording}
+          onTouchStart={() => startRecording('target')}
+          onTouchEnd={stopRecording}
+          disabled={isTranslating || isRecording === 'source'}
+          className={`flex-1 aspect-square rounded-3xl flex flex-col items-center justify-center transition-all transform ${
+            isRecording === 'target' 
+              ? 'bg-red-600 scale-95 shadow-inner' 
+              : 'bg-white shadow-2xl hover:scale-105 active:scale-95'
+          } ${isTranslating ? 'opacity-50' : ''}`}
+        >
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleLanguage(targetLang, false);
+            }}
+            className="cursor-pointer hover:scale-110 transition-transform"
           >
-            {/* Pulse animation */}
-            {pulseAnimation && (
-              <>
-                <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75"></span>
-                <span className="absolute inset-0 rounded-full bg-red-400 animate-ping animation-delay-200 opacity-50"></span>
-              </>
-            )}
-            
-            <div className="relative w-full h-full flex flex-col items-center justify-center">
-              {isRecording ? (
-                <>
-                  <div className="w-16 h-16 bg-white rounded-lg animate-pulse" />
-                  <p className="text-white text-lg font-medium mt-2">Nagrywam...</p>
-                  <p className="text-white/80 text-sm">{(recordingTime / 1000).toFixed(1)}s</p>
-                </>
-              ) : isTranslating ? (
-                <>
-                  <Loader2 size={64} className="text-purple-600 animate-spin" />
-                  <p className="text-purple-600 text-lg font-medium mt-2">Tłumaczę...</p>
-                </>
-              ) : (
-                <>
-                  <Mic size={64} className="text-purple-600" />
-                  <p className="text-purple-600 text-lg font-medium mt-2">Przytrzymaj</p>
-                </>
-              )}
-            </div>
-          </button>
-        </div>
-
-        {/* Target Languages Display */}
-        <div className="text-center mb-8">
-          <p className="text-white/70 text-sm mb-2">Tłumaczę na:</p>
-          <div className="flex justify-center gap-6">
-            {getTargetLanguages(activeLang).map((lang) => (
-              <div key={lang} className="flex items-center gap-2">
-                <span className="text-3xl">{languages[lang].flag}</span>
-                <span className="text-white text-lg">{languages[lang].name}</span>
-              </div>
-            ))}
+            <span className="text-8xl mb-4 block">{languages[targetLang].flag}</span>
+            <p className="text-3xl font-bold mb-2">{languages[targetLang].name}</p>
           </div>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mb-8 bg-red-500/20 backdrop-blur-md border border-red-500/50 rounded-2xl p-4 max-w-md mx-auto">
-            <p className="text-white text-center">{error}</p>
-          </div>
-        )}
-
-        {/* Translation Result */}
-        {lastTranslation && !isTranslating && !error && (
-          <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-2xl max-w-2xl mx-auto">
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">{languages[lastTranslation.from].flag}</span>
-                <p className="text-gray-600 font-medium">Usłyszałem:</p>
-              </div>
-              <p className="text-2xl font-semibold text-gray-800">{lastTranslation.original}</p>
-            </div>
-            
-            <div className="border-t pt-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">{languages[lastTranslation.to].flag}</span>
-                <p className="text-gray-600 font-medium">Tłumaczenie:</p>
-                <button
-                  onClick={() => playTranslation(lastTranslation.translated, lastTranslation.to)}
-                  className="ml-auto p-3 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors"
-                >
-                  <Volume2 size={20} />
-                </button>
-              </div>
-              <p className="text-2xl font-semibold text-gray-800">{lastTranslation.translated}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Instructions */}
-        <div className="text-center mt-8">
-          <p className="text-white/70 text-sm">
-            Wybierz język klikając flagę • Przytrzymaj przycisk i mów
-          </p>
-        </div>
+          {isRecording === 'target' ? (
+            <>
+              <Square size={64} className="text-white animate-pulse" />
+              <p className="text-xl text-white mt-2">Nagrywam...</p>
+            </>
+          ) : (
+            <>
+              <Mic size={64} className="text-gray-700" />
+              <p className="text-xl text-gray-600 mt-2">Przytrzymaj i mów</p>
+            </>
+          )}
+        </button>
       </div>
-
-      <style jsx>{`
-        @keyframes ping {
-          75%, 100% {
-            transform: scale(2);
-            opacity: 0;
-          }
-        }
-        .animation-delay-200 {
-          animation-delay: 200ms;
-        }
-      `}</style>
+      
+      {/* Translation display */}
+      {isTranslating && (
+        <div className="mt-8 text-white text-2xl animate-pulse">
+          Tłumaczę...
+        </div>
+      )}
+      
+      {error && (
+        <div className="mt-8 bg-red-500/20 backdrop-blur border border-red-500 rounded-xl p-4 max-w-md">
+          <p className="text-white text-center">{error}</p>
+        </div>
+      )}
+      
+      {lastTranslation && !isTranslating && !error && (
+        <div className="mt-8 w-full max-w-4xl bg-white/90 backdrop-blur rounded-3xl p-6 shadow-2xl">
+          <div className="mb-4">
+            <p className="text-lg text-gray-600 mb-1">
+              {languages[lastTranslation.from].flag} Usłyszałem:
+            </p>
+            <p className="text-2xl font-semibold">{lastTranslation.original}</p>
+          </div>
+          <div className="border-t pt-4">
+            <p className="text-lg text-gray-600 mb-1 flex items-center gap-2">
+              {languages[lastTranslation.to].flag} Tłumaczenie:
+              <button
+                onClick={() => playTranslation(lastTranslation.translated, lastTranslation.to)}
+                className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+              >
+                <Volume2 size={20} />
+              </button>
+            </p>
+            <p className="text-2xl font-semibold">{lastTranslation.translated}</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
