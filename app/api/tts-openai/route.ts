@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Map language codes to OpenAI TTS voices
+// Map language codes to OpenAI TTS voices - updated for better quality
 const voiceMap: Record<string, string> = {
-  pl: 'nova', // Female voice good for Polish
-  en: 'alloy', // Natural English voice
-  fr: 'shimmer', // Good for French
+  pl: 'onyx',    // Male voice, clearer for Polish pronunciation
+  en: 'nova',    // Female voice, very clear for English
+  fr: 'alloy',   // Neutral voice, good for French
 };
 
 export async function POST(request: NextRequest) {
@@ -36,11 +36,11 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'tts-1',
+        model: 'tts-1-hd',  // Użyj modelu HD dla lepszej jakości
         input: text,
         voice: voice,
         response_format: 'mp3',
-        speed: 1.0,
+        speed: 0.95,  // Trochę wolniej dla lepszego zrozumienia
       }),
     });
 

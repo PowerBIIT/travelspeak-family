@@ -36,21 +36,26 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4-turbo',  // Użyj najnowszego modelu
         messages: [
           {
             role: 'system',
-            content: `You are a professional translator specializing in conversational translation. Translate the following text from ${fromLang} to ${toLang}. 
-            Keep the translation natural, conversational, and appropriate for spoken dialogue. 
-            Preserve the tone and intent of the original message.
-            Only return the translated text, nothing else.`
+            content: `You are a professional interpreter helping travelers communicate. Translate the following spoken text from ${fromLang} to ${toLang}.
+            
+            Important guidelines:
+            - Make the translation sound natural as if spoken by a native speaker
+            - Keep it conversational and appropriate for face-to-face dialogue
+            - Preserve the emotional tone and intent
+            - If the text contains questions, keep them as questions
+            - For Polish translations, use informal "ty" form unless clearly formal context
+            - Return ONLY the translated text, no explanations or notes`
           },
           {
             role: 'user',
             content: text
           }
         ],
-        temperature: 0.3,
+        temperature: 0.2,  // Niższa temperatura dla bardziej dokładnych tłumaczeń
         max_tokens: 500,
       }),
     });

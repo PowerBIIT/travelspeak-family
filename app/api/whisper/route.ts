@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
     openAIFormData.append('model', 'whisper-1');
     openAIFormData.append('language', language);
     openAIFormData.append('response_format', 'json');
+    // Add temperature for better accuracy
+    openAIFormData.append('temperature', '0');
+    // Add prompt to improve context
+    openAIFormData.append('prompt', 'This is a conversation between travelers. Accurate transcription is important.');
 
     // Call OpenAI Whisper API
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {

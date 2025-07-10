@@ -22,11 +22,13 @@ export default function Home() {
     to: Language;
   } | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   const swapLanguages = () => {
+    setError(null);
     setSourceLang(targetLang);
     setTargetLang(sourceLang);
   };
@@ -49,8 +51,20 @@ export default function Home() {
 
   const startRecording = async (side: 'source' | 'target') => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        } 
+      });
+      
+      // Sprawdź obsługiwane formaty
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+        ? 'audio/webm' 
+        : 'audio/mp4';
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -62,7 +76,7 @@ export default function Home() {
       };
       
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         stream.getTracks().forEach(track => track.stop());
         
         const fromLang = side === 'source' ? sourceLang : targetLang;
@@ -75,7 +89,7 @@ export default function Home() {
       setIsRecording(side);
     } catch (error) {
       console.error('Error accessing microphone:', error);
-      alert('Nie mogę uzyskać dostępu do mikrofonu!');
+      setError('Nie mogę uzyskać dostępu do mikrofonu. Sprawdź uprawnienia w przeglądarce.');
     }
   };
 
@@ -88,6 +102,7 @@ export default function Home() {
 
   const processRecording = async (audioBlob: Blob, from: Language, to: Language) => {
     setIsTranslating(true);
+    setError(null);
     
     try {
       // 1. Convert speech to text using OpenAI Whisper
@@ -127,7 +142,7 @@ export default function Home() {
       
     } catch (error) {
       console.error('Error processing:', error);
-      alert('Wystąpił błąd podczas przetwarzania');
+      setError('Wystąpił błąd. Sprawdź połączenie internetowe i spróbuj ponownie.');
     } finally {
       setIsTranslating(false);
     }
@@ -155,9 +170,10 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-500 to-purple-600">
-      <h1 className="text-6xl font-bold mb-12 text-white text-center drop-shadow-lg">
+      <h1 className="text-6xl font-bold mb-2 text-white text-center drop-shadow-lg">
         🌍 TravelSpeak
       </h1>
+      <p className="text-white/70 text-sm mb-8">v2.0.0</p>
       
       {/* Language swap button */}
       <button
@@ -249,7 +265,13 @@ export default function Home() {
         </div>
       )}
       
-      {lastTranslation && !isTranslating && (
+      {error && (
+        <div className="mt-8 bg-red-500/20 backdrop-blur border border-red-500 rounded-xl p-4 max-w-md">
+          <p className="text-white text-center">{error}</p>
+        </div>
+      )}
+      
+      {lastTranslation && !isTranslating && !error && (
         <div className="mt-8 w-full max-w-4xl bg-white/90 backdrop-blur rounded-3xl p-6 shadow-2xl">
           <div className="mb-4">
             <p className="text-lg text-gray-600 mb-1">
