@@ -307,17 +307,6 @@ export default function Home() {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes ping {
-          75%, 100% {
-            transform: scale(2);
-            opacity: 0;
-          }
-        }
-        .animation-delay-200 {
-          animation-delay: 200ms;
-        }
-      `}</style>
     </main>
   );
 }

@@ -42,3 +42,8 @@ body {
 .high-contrast {
   @apply text-gray-900 font-semibold;
 }
+
+/* Custom animation delays */
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
