@@ -10,7 +10,7 @@ import { API_LIMITS } from '@/lib/types';
 
 export default function VoiceTranslatePage() {
   const router = useRouter();
-  const { currentLanguagePair, addTranslation, incrementDailyCount, dailyTranslationCount, checkAndResetDailyCount } = useStore();
+  const { currentLanguagePair, incrementDailyCount, dailyTranslationCount, checkAndResetDailyCount } = useStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [originalText, setOriginalText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
@@ -84,14 +84,6 @@ export default function VoiceTranslatePage() {
           const translation = translateData.translation;
           setTranslatedText(translation);
 
-          // Save to history
-          addTranslation({
-            originalText: text,
-            translatedText: translation,
-            from: currentLanguagePair.from,
-            to: currentLanguagePair.to,
-            type: 'voice',
-          });
 
           // Increment daily count
           incrementDailyCount();
@@ -158,14 +150,6 @@ export default function VoiceTranslatePage() {
           />
         )}
 
-        <div className="mt-8 bg-blue-50 p-4 rounded-2xl">
-          <p className="text-center text-lg text-blue-800 font-semibold">
-            Pozostało tłumaczeń dzisiaj: {API_LIMITS.translationsPerDay - dailyTranslationCount}
-          </p>
-          <p className="text-center text-sm text-blue-600 mt-2">
-            💡 Wskazówka: Użyj gotowych zwrotów - działają bez limitu!
-          </p>
-        </div>
       </div>
     </main>
   );

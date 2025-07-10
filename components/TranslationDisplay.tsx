@@ -1,8 +1,9 @@
 'use client';
 
 import { Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Language } from '@/lib/types';
+import { useTTS } from '@/lib/useTTS';
 
 interface TranslationDisplayProps {
   originalText: string;
@@ -18,6 +19,19 @@ export default function TranslationDisplay({
   toLang,
 }: TranslationDisplayProps) {
   const [copied, setCopied] = useState(false);
+  const { speak, stop, isPlaying, isSupported } = useTTS();
+
+  // Auto-play when translation appears
+  useEffect(() => {
+    if (translatedText && isSupported) {
+      // Small delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        speak(translatedText, toLang);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [translatedText, toLang]);
 
   const handleCopy = async () => {
     try {
@@ -29,6 +43,7 @@ export default function TranslationDisplay({
     }
   };
 
+
   const getLanguageFlag = (lang: Language) => {
     switch (lang) {
       case 'pl': return '🇵🇱';
@@ -39,19 +54,6 @@ export default function TranslationDisplay({
 
   return (
     <div className="w-full max-w-2xl space-y-6">
-      {/* Original text */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-200">
-        <div className="flex items-center mb-3">
-          <span className="text-4xl mr-3">{getLanguageFlag(fromLang)}</span>
-          <span className="text-xl font-semibold text-gray-700">Powiedziałeś:</span>
-        </div>
-        <p className="text-2xl text-gray-800">{originalText}</p>
-      </div>
-
-      {/* Divider */}
-      <div className="flex justify-center">
-        <div className="text-4xl animate-bounce">⬇️</div>
-      </div>
 
       {/* Translated text */}
       <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-2xl p-6 shadow-xl border-2 border-blue-300">

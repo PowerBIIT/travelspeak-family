@@ -9,14 +9,13 @@ import { API_LIMITS } from '@/lib/types';
 
 export default function TextTranslatePage() {
   const router = useRouter();
-  const { currentLanguagePair, addTranslation, fontSize, incrementDailyCount, dailyTranslationCount, checkAndResetDailyCount } = useStore();
+  const { currentLanguagePair, incrementDailyCount, dailyTranslationCount, checkAndResetDailyCount } = useStore();
   const [inputText, setInputText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [originalText, setOriginalText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fontSizeClass = fontSize === 'elderly' ? 'text-elderly' : fontSize === 'large' ? 'text-xl' : 'text-base';
 
   const handleTranslate = async () => {
     if (!inputText.trim() || isProcessing) return;
@@ -56,14 +55,6 @@ export default function TextTranslatePage() {
       setOriginalText(inputText);
       setTranslatedText(translation);
 
-      // Save to history
-      addTranslation({
-        originalText: inputText,
-        translatedText: translation,
-        from: currentLanguagePair.from,
-        to: currentLanguagePair.to,
-        type: 'text',
-      });
 
       // Increment daily count
       incrementDailyCount();
@@ -88,7 +79,7 @@ export default function TextTranslatePage() {
   };
 
   return (
-    <main className={`flex min-h-screen flex-col items-center p-4 ${fontSizeClass}`}>
+    <main className="flex min-h-screen flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-white">
       <div className="w-full max-w-2xl">
         <button
           onClick={() => router.push('/')}
@@ -98,7 +89,7 @@ export default function TextTranslatePage() {
           Powrót
         </button>
 
-        <h1 className="text-2xl font-bold mb-8 text-center">Tłumaczenie tekstowe</h1>
+        <h1 className="text-4xl font-bold mb-8 text-center text-blue-700">⌨️ Tłumaczenie tekstowe</h1>
 
         {/* Input area */}
         <div className="mb-6">
@@ -152,9 +143,6 @@ export default function TextTranslatePage() {
           />
         )}
 
-        <div className="mt-8 text-center text-sm text-gray-600">
-          <p>Pozostało tłumaczeń dzisiaj: {API_LIMITS.translationsPerDay - dailyTranslationCount}</p>
-        </div>
       </div>
     </main>
   );

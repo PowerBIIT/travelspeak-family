@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { Language } from '@/lib/types';
-import { Mic, Type, MessageSquare, History } from 'lucide-react';
+import { Mic, Type, MessageSquare } from 'lucide-react';
 
 const languages: { code: Language; name: string; flag: string }[] = [
   { code: 'pl', name: 'Polski', flag: '🇵🇱' },
@@ -101,13 +101,6 @@ export default function Home() {
           <span className="text-3xl font-bold">💬 ZWROTY (BEZ NETU!)</span>
         </button>
         
-        <button
-          onClick={() => router.push('/history')}
-          className="w-full bg-gray-600 text-white rounded-3xl p-5 flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition-all"
-        >
-          <History size={36} className="mr-4" />
-          <span className="text-2xl font-bold">📜 HISTORIA</span>
-        </button>
       </div>
     </main>
   );
