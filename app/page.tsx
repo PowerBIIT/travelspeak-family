@@ -1,107 +1,276 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useStore } from '@/lib/store';
-import { Language } from '@/lib/types';
-import { Mic, Type, MessageSquare } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Mic, Square, Volume2 } from 'lucide-react';
 
-const languages: { code: Language; name: string; flag: string }[] = [
-  { code: 'pl', name: 'Polski', flag: '🇵🇱' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-];
+type Language = 'pl' | 'en' | 'fr';
+
+const languages: Record<Language, { name: string; flag: string }> = {
+  pl: { name: 'Polski', flag: '🇵🇱' },
+  en: { name: 'English', flag: '🇬🇧' },
+  fr: { name: 'Français', flag: '🇫🇷' },
+};
 
 export default function Home() {
-  const router = useRouter();
-  const { currentLanguagePair, setLanguagePair } = useStore();
+  const [sourceLang, setSourceLang] = useState<Language>('pl');
+  const [targetLang, setTargetLang] = useState<Language>('en');
+  const [isRecording, setIsRecording] = useState<'source' | 'target' | null>(null);
+  const [lastTranslation, setLastTranslation] = useState<{
+    original: string;
+    translated: string;
+    from: Language;
+    to: Language;
+  } | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  const handleLanguageSwap = () => {
-    setLanguagePair({
-      from: currentLanguagePair.to,
-      to: currentLanguagePair.from,
-    });
+  const swapLanguages = () => {
+    setSourceLang(targetLang);
+    setTargetLang(sourceLang);
   };
 
-  const selectNextLanguage = (type: 'from' | 'to') => {
-    const current = currentLanguagePair[type];
-    const availableLangs = type === 'to' 
-      ? languages.filter(l => l.code !== currentLanguagePair.from)
-      : languages;
-    const currentIndex = availableLangs.findIndex(l => l.code === current);
-    const nextLang = availableLangs[(currentIndex + 1) % availableLangs.length];
+  const cycleLanguage = (current: Language, isSource: boolean) => {
+    const langs: Language[] = ['pl', 'en', 'fr'];
+    const currentIndex = langs.indexOf(current);
+    let nextLang: Language;
     
-    setLanguagePair({
-      ...currentLanguagePair,
-      [type]: nextLang.code,
-    });
+    do {
+      nextLang = langs[(currentIndex + 1) % langs.length];
+    } while (nextLang === (isSource ? targetLang : sourceLang));
+    
+    if (isSource) {
+      setSourceLang(nextLang);
+    } else {
+      setTargetLang(nextLang);
+    }
   };
 
-  const fromLang = languages.find(l => l.code === currentLanguagePair.from)!;
-  const toLang = languages.find(l => l.code === currentLanguagePair.to)!;
+  const startRecording = async (side: 'source' | 'target') => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        
+        const fromLang = side === 'source' ? sourceLang : targetLang;
+        const toLang = side === 'source' ? targetLang : sourceLang;
+        
+        await processRecording(audioBlob, fromLang, toLang);
+      };
+      
+      mediaRecorder.start();
+      setIsRecording(side);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('Nie mogę uzyskać dostępu do mikrofonu!');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(null);
+    }
+  };
+
+  const processRecording = async (audioBlob: Blob, from: Language, to: Language) => {
+    setIsTranslating(true);
+    
+    try {
+      // 1. Convert speech to text using OpenAI Whisper
+      const formData = new FormData();
+      formData.append('audio', audioBlob);
+      formData.append('language', from);
+      
+      const speechResponse = await fetch('/api/whisper', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!speechResponse.ok) throw new Error('Błąd rozpoznawania mowy');
+      
+      const { text } = await speechResponse.json();
+      
+      // 2. Translate text using OpenAI GPT-4
+      const translateResponse = await fetch('/api/translate-gpt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, from, to }),
+      });
+      
+      if (!translateResponse.ok) throw new Error('Błąd tłumaczenia');
+      
+      const { translation } = await translateResponse.json();
+      
+      setLastTranslation({
+        original: text,
+        translated: translation,
+        from,
+        to,
+      });
+      
+      // 3. Play translation using OpenAI TTS
+      await playTranslation(translation, to);
+      
+    } catch (error) {
+      console.error('Error processing:', error);
+      alert('Wystąpił błąd podczas przetwarzania');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const playTranslation = async (text: string, language: Language) => {
+    try {
+      const response = await fetch('/api/tts-openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language }),
+      });
+      
+      if (!response.ok) throw new Error('Błąd syntezy mowy');
+      
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      await audio.play();
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-white">
-      <h1 className="text-5xl font-bold mb-8 text-center text-blue-700">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-500 to-purple-600">
+      <h1 className="text-6xl font-bold mb-12 text-white text-center drop-shadow-lg">
         🌍 TravelSpeak
       </h1>
       
-      {/* Language selector - SIMPLIFIED */}
-      <div className="w-full max-w-2xl mb-8 bg-white p-6 rounded-3xl shadow-xl">
-        <div className="flex items-center justify-around">
-          <button
-            onClick={() => selectNextLanguage('from')}
-            className="text-center p-4 rounded-2xl bg-blue-50 hover:bg-blue-100 transition-all active:scale-95"
+      {/* Language swap button */}
+      <button
+        onClick={swapLanguages}
+        className="mb-8 p-4 bg-white/20 backdrop-blur rounded-full text-5xl hover:bg-white/30 transition-all active:scale-95"
+      >
+        ↔️
+      </button>
+      
+      {/* Two speaker buttons */}
+      <div className="flex gap-8 w-full max-w-4xl">
+        {/* Source language button */}
+        <button
+          onMouseDown={() => startRecording('source')}
+          onMouseUp={stopRecording}
+          onTouchStart={() => startRecording('source')}
+          onTouchEnd={stopRecording}
+          disabled={isTranslating || isRecording === 'target'}
+          className={`flex-1 aspect-square rounded-3xl flex flex-col items-center justify-center transition-all transform ${
+            isRecording === 'source' 
+              ? 'bg-red-600 scale-95 shadow-inner' 
+              : 'bg-white shadow-2xl hover:scale-105 active:scale-95'
+          } ${isTranslating ? 'opacity-50' : ''}`}
+        >
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleLanguage(sourceLang, true);
+            }}
+            className="cursor-pointer hover:scale-110 transition-transform"
           >
-            <p className="text-xl font-bold text-gray-700 mb-2">Z języka:</p>
-            <span className="text-7xl block mb-2">{fromLang.flag}</span>
-            <p className="text-2xl font-bold">{fromLang.name}</p>
-          </button>
-          
-          <button
-            onClick={handleLanguageSwap}
-            className="p-6 text-5xl rounded-full bg-gray-100 hover:bg-gray-200 transition-all active:scale-95"
+            <span className="text-8xl mb-4 block">{languages[sourceLang].flag}</span>
+            <p className="text-3xl font-bold mb-2">{languages[sourceLang].name}</p>
+          </div>
+          {isRecording === 'source' ? (
+            <>
+              <Square size={64} className="text-white animate-pulse" />
+              <p className="text-xl text-white mt-2">Nagrywam...</p>
+            </>
+          ) : (
+            <>
+              <Mic size={64} className="text-gray-700" />
+              <p className="text-xl text-gray-600 mt-2">Przytrzymaj i mów</p>
+            </>
+          )}
+        </button>
+        
+        {/* Target language button */}
+        <button
+          onMouseDown={() => startRecording('target')}
+          onMouseUp={stopRecording}
+          onTouchStart={() => startRecording('target')}
+          onTouchEnd={stopRecording}
+          disabled={isTranslating || isRecording === 'source'}
+          className={`flex-1 aspect-square rounded-3xl flex flex-col items-center justify-center transition-all transform ${
+            isRecording === 'target' 
+              ? 'bg-red-600 scale-95 shadow-inner' 
+              : 'bg-white shadow-2xl hover:scale-105 active:scale-95'
+          } ${isTranslating ? 'opacity-50' : ''}`}
+        >
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleLanguage(targetLang, false);
+            }}
+            className="cursor-pointer hover:scale-110 transition-transform"
           >
-            ↔️
-          </button>
-          
-          <button
-            onClick={() => selectNextLanguage('to')}
-            className="text-center p-4 rounded-2xl bg-green-50 hover:bg-green-100 transition-all active:scale-95"
-          >
-            <p className="text-xl font-bold text-gray-700 mb-2">Na język:</p>
-            <span className="text-7xl block mb-2">{toLang.flag}</span>
-            <p className="text-2xl font-bold">{toLang.name}</p>
-          </button>
-        </div>
+            <span className="text-8xl mb-4 block">{languages[targetLang].flag}</span>
+            <p className="text-3xl font-bold mb-2">{languages[targetLang].name}</p>
+          </div>
+          {isRecording === 'target' ? (
+            <>
+              <Square size={64} className="text-white animate-pulse" />
+              <p className="text-xl text-white mt-2">Nagrywam...</p>
+            </>
+          ) : (
+            <>
+              <Mic size={64} className="text-gray-700" />
+              <p className="text-xl text-gray-600 mt-2">Przytrzymaj i mów</p>
+            </>
+          )}
+        </button>
       </div>
       
-      {/* Main action buttons - BIGGER AND CLEARER */}
-      <div className="w-full max-w-2xl space-y-6">
-        <button
-          onClick={() => router.push('/translate/voice')}
-          className="w-full bg-red-600 text-white rounded-3xl p-8 flex items-center justify-center shadow-2xl hover:bg-red-700 active:scale-95 transition-all"
-        >
-          <Mic size={48} className="mr-4" />
-          <span className="text-4xl font-bold">🎤 MÓWIĘ</span>
-        </button>
-        
-        <button
-          onClick={() => router.push('/translate/text')}
-          className="w-full bg-blue-600 text-white rounded-3xl p-6 flex items-center justify-center shadow-xl hover:bg-blue-700 active:scale-95 transition-all"
-        >
-          <Type size={40} className="mr-4" />
-          <span className="text-3xl font-bold">⌨️ PISZĘ</span>
-        </button>
-        
-        <button
-          onClick={() => router.push('/phrases')}
-          className="w-full bg-green-600 text-white rounded-3xl p-6 flex items-center justify-center shadow-xl hover:bg-green-700 active:scale-95 transition-all"
-        >
-          <MessageSquare size={40} className="mr-4" />
-          <span className="text-3xl font-bold">💬 ZWROTY (BEZ NETU!)</span>
-        </button>
-        
-      </div>
+      {/* Translation display */}
+      {isTranslating && (
+        <div className="mt-8 text-white text-2xl animate-pulse">
+          Tłumaczę...
+        </div>
+      )}
+      
+      {lastTranslation && !isTranslating && (
+        <div className="mt-8 w-full max-w-4xl bg-white/90 backdrop-blur rounded-3xl p-6 shadow-2xl">
+          <div className="mb-4">
+            <p className="text-lg text-gray-600 mb-1">
+              {languages[lastTranslation.from].flag} Usłyszałem:
+            </p>
+            <p className="text-2xl font-semibold">{lastTranslation.original}</p>
+          </div>
+          <div className="border-t pt-4">
+            <p className="text-lg text-gray-600 mb-1 flex items-center gap-2">
+              {languages[lastTranslation.to].flag} Tłumaczenie:
+              <button
+                onClick={() => playTranslation(lastTranslation.translated, lastTranslation.to)}
+                className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+              >
+                <Volume2 size={20} />
+              </button>
+            </p>
+            <p className="text-2xl font-semibold">{lastTranslation.translated}</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
