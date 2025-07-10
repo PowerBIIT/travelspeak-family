@@ -10,7 +10,6 @@ export default function HistoryPage() {
   const router = useRouter();
   const { translations, clearHistory, fontSize } = useStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   
   const fontSizeClass = fontSize === 'elderly' ? 'text-elderly' : fontSize === 'large' ? 'text-xl' : 'text-base';
 
@@ -19,37 +18,6 @@ export default function HistoryPage() {
     setShowClearConfirm(false);
   };
 
-  const handlePlayAudio = async (translationId: string, text: string, language: string) => {
-    if (playingAudioId) return;
-
-    setPlayingAudioId(translationId);
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, language }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Błąd podczas generowania audio');
-      }
-
-      const audioData = await response.arrayBuffer();
-      const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      const audio = new Audio(audioUrl);
-      audio.onended = () => {
-        setPlayingAudioId(null);
-        URL.revokeObjectURL(audioUrl);
-      };
-      
-      await audio.play();
-    } catch (err) {
-      console.error('Audio playback error:', err);
-      setPlayingAudioId(null);
-    }
-  };
 
   const formatDate = (date: Date) => {
     const d = new Date(date);
@@ -141,8 +109,6 @@ export default function HistoryPage() {
                   translatedText={translation.translatedText}
                   fromLang={translation.from}
                   toLang={translation.to}
-                  onPlayAudio={() => handlePlayAudio(translation.id, translation.translatedText, translation.to)}
-                  isPlayingAudio={playingAudioId === translation.id}
                 />
               </div>
             ))}

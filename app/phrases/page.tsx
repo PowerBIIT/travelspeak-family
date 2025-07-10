@@ -24,7 +24,7 @@ export default function PhrasesPage() {
 
         <h1 className="text-2xl font-bold mb-4 text-center">Gotowe zwroty</h1>
         <p className="text-gray-600 text-center mb-8">
-          Działają bez internetu! Kliknij ikonę głośnika, aby usłyszeć wymowę.
+          Działają bez internetu! Pokaż rozmówcy ekran z tłumaczeniem.
         </p>
 
         <OfflinePhrases

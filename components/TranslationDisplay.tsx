@@ -1,6 +1,6 @@
 'use client';
 
-import { Volume2, Copy, Check } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { Language } from '@/lib/types';
 
@@ -9,8 +9,6 @@ interface TranslationDisplayProps {
   translatedText: string;
   fromLang: Language;
   toLang: Language;
-  onPlayAudio?: () => void;
-  isPlayingAudio?: boolean;
 }
 
 export default function TranslationDisplay({
@@ -18,8 +16,6 @@ export default function TranslationDisplay({
   translatedText,
   fromLang,
   toLang,
-  onPlayAudio,
-  isPlayingAudio = false,
 }: TranslationDisplayProps) {
   const [copied, setCopied] = useState(false);
 
@@ -64,29 +60,13 @@ export default function TranslationDisplay({
             <span className="text-2xl mr-2">{getLanguageFlag(toLang)}</span>
             <span className="text-sm text-gray-600">Tłumaczenie</span>
           </div>
-          <div className="flex gap-2">
-            {onPlayAudio && (
-              <button
-                onClick={onPlayAudio}
-                disabled={isPlayingAudio}
-                className={`p-2 rounded-lg transition-colors ${
-                  isPlayingAudio
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white hover:bg-gray-100'
-                }`}
-                aria-label="Odtwórz audio"
-              >
-                <Volume2 size={20} />
-              </button>
-            )}
-            <button
-              onClick={handleCopy}
-              className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-              aria-label="Kopiuj tłumaczenie"
-            >
-              {copied ? <Check size={20} className="text-green-600" /> : <Copy size={20} />}
-            </button>
-          </div>
+          <button
+            onClick={handleCopy}
+            className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Kopiuj tłumaczenie"
+          >
+            {copied ? <Check size={20} className="text-green-600" /> : <Copy size={20} />}
+          </button>
         </div>
         <p className="text-lg font-semibold">{translatedText}</p>
       </div>

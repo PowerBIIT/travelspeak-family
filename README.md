@@ -1,124 +1,66 @@
 # TravelSpeak Family
 
-Prosta aplikacja do tłumaczenia dla całej rodziny podczas wyjazdu do Anglii i Francji. Zaprojektowana z myślą o łatwości użycia przez wszystkich członków rodziny - od dzieci po dziadków.
+Prosta aplikacja do tłumaczenia dla rodziny jadącej jutro do Europy. Pomaga w rozmowie z innymi w prosty sposób.
 
 ## 🚀 Funkcje
 
-- **Tłumaczenie głosowe** - mów po polsku, słuchaj w języku docelowym
+- **Tłumaczenie głosowe** - mów po polsku, zobacz tłumaczenie
 - **Tłumaczenie tekstowe** - wpisz tekst do przetłumaczenia
 - **Gotowe zwroty offline** - najważniejsze frazy działające bez internetu
 - **Historia tłumaczeń** - dostęp do poprzednich tłumaczeń
-- **Duże przyciski** - łatwe w użyciu dla osób starszych
-- **3 rozmiary czcionki** - dostosowanie do potrzeb użytkownika
+- **Duże przyciski** - łatwe w użyciu dla całej rodziny
 
-## 🛠 Technologie
+## 🚀 Szybki deployment na Railway
 
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- PWA z Service Worker
-- Zustand (zarządzanie stanem)
+### 1. Przygotowanie (5 minut)
 
-## 📋 Wymagania
+Załóż konta:
+- [DeepSeek](https://platform.deepseek.com/api_keys) - tłumaczenia (10$ kredytu wystarczy na miesiące)
+- [AssemblyAI](https://www.assemblyai.com/app/account) - rozpoznawanie mowy (darmowe 416h/miesiąc)
 
-- Node.js 18+
-- Konta w serwisach:
-  - [DeepSeek](https://deepseek.com) - tłumaczenia
-  - [AssemblyAI](https://assemblyai.com) - speech-to-text
-  - [AWS](https://aws.amazon.com) - Amazon Polly dla text-to-speech
+### 2. Deploy na Railway
 
-## 🚀 Szybki start
-
-1. **Sklonuj repozytorium**
 ```bash
-git clone https://github.com/your-username/travelspeak-family.git
-cd travelspeak-family
+# W terminalu w folderze projektu
+railway login
+railway link
+railway up
 ```
 
-2. **Zainstaluj zależności**
+### 3. Dodaj klucze API w Railway
+
 ```bash
-npm install
+railway variables --set "DEEPSEEK_API_KEY=twój_klucz" --set "ASSEMBLYAI_API_KEY=twój_klucz"
+railway up
 ```
 
-3. **Skonfiguruj zmienne środowiskowe**
-```bash
-cp .env.example .env.local
-```
-
-Następnie wypełnij plik `.env.local` swoimi kluczami API:
-- `DEEPSEEK_API_KEY` - klucz API z DeepSeek
-- `ASSEMBLYAI_API_KEY` - klucz API z AssemblyAI
-- `AWS_ACCESS_KEY_ID` - klucz dostępu AWS
-- `AWS_SECRET_ACCESS_KEY` - sekretny klucz AWS
-- `AWS_REGION` - region AWS (domyślnie us-east-1)
-
-4. **Uruchom aplikację lokalnie**
-```bash
-npm run dev
-```
-
-Aplikacja będzie dostępna pod adresem [http://localhost:3000](http://localhost:3000)
-
-## 🌐 Deployment na Vercel
-
-1. **Zainstaluj Vercel CLI**
-```bash
-npm i -g vercel
-```
-
-2. **Połącz z Vercel**
-```bash
-vercel link
-```
-
-3. **Dodaj zmienne środowiskowe**
-```bash
-vercel env add DEEPSEEK_API_KEY production
-vercel env add ASSEMBLYAI_API_KEY production
-vercel env add AWS_ACCESS_KEY_ID production
-vercel env add AWS_SECRET_ACCESS_KEY production
-vercel env add AWS_REGION production
-```
-
-4. **Deploy**
-```bash
-vercel --prod
-```
+Aplikacja będzie dostępna pod adresem który Railway poda po deploymencie.
 
 ## 📱 Instalacja na telefonie
 
-Po deploymencie aplikacja działa jako PWA:
-
 1. Otwórz aplikację w przeglądarce na telefonie
 2. **Android**: Kliknij "Dodaj do ekranu głównego"
-3. **iOS**: Kliknij przycisk Udostępnij → "Dodaj do ekranu głównego"
+3. **iOS**: Kliknij Udostępnij → "Dodaj do ekranu głównego"
 
-## 💰 Koszty
+## 📖 Jak używać
 
-- **DeepSeek**: ~0.0004$ per tłumaczenie
-- **AssemblyAI**: Darmowe 416h/miesiąc
-- **Amazon Polly**: Darmowe 5M znaków/miesiąc
-- **Łącznie**: ~5 PLN/miesiąc przy normalnym użyciu
-
-## 🔒 Bezpieczeństwo
-
-- Wszystkie klucze API przechowywane w zmiennych środowiskowych
-- Limit 100 tłumaczeń dziennie
-- Maksymalna długość tekstu: 500 znaków
-- Maksymalny czas nagrania: 30 sekund
-
-## 📖 Użycie
-
-1. **Wybierz języki** na stronie głównej
-2. **Tłumaczenie głosowe**: Naciśnij duży przycisk mikrofonu i mów
-3. **Tłumaczenie tekstowe**: Wpisz tekst i kliknij "Przetłumacz"
-4. **Gotowe zwroty**: Działają offline, idealne na lotnisko
-5. **Historia**: Przejrzyj poprzednie tłumaczenia
+1. **Wybierz języki** - Polski ↔ Angielski/Francuski
+2. **Tłumaczenie głosowe** - Naciśnij duży mikrofon i mów
+3. **Tłumaczenie tekstowe** - Wpisz i kliknij "Przetłumacz"
+4. **Gotowe zwroty** - Działają bez internetu!
 
 ## ✅ Przed wyjazdem
 
-- [ ] Zainstaluj aplikację na wszystkich telefonach
+- [ ] Zainstaluj na wszystkich telefonach
+- [ ] Sprawdź gotowe zwroty (działają offline)
 - [ ] Przetestuj tłumaczenie głosowe
-- [ ] Sprawdź czy gotowe zwroty działają offline
-- [ ] Dostosuj wielkość czcionki dla dziadków
 - [ ] Pokaż dzieciom gdzie są zwroty SOS
+
+## 💡 Wskazówki
+
+- Gotowe zwroty działają BEZ INTERNETU
+- Kategoria SOS zawiera najważniejsze frazy
+- Historia zapisuje ostatnie 50 tłumaczeń
+- Możesz kopiować tłumaczenia przyciskiem
+
+Powodzenia w podróży! 🎉

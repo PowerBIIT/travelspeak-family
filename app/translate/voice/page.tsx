@@ -15,7 +15,6 @@ export default function VoiceTranslatePage() {
   const [originalText, setOriginalText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
   const fontSizeClass = fontSize === 'elderly' ? 'text-elderly' : fontSize === 'large' ? 'text-xl' : 'text-base';
 
@@ -106,40 +105,6 @@ export default function VoiceTranslatePage() {
     }
   };
 
-  const handlePlayAudio = async () => {
-    if (!translatedText || isPlayingAudio) return;
-
-    setIsPlayingAudio(true);
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: translatedText,
-          language: currentLanguagePair.to,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Błąd podczas generowania audio');
-      }
-
-      const audioData = await response.arrayBuffer();
-      const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      const audio = new Audio(audioUrl);
-      audio.onended = () => {
-        setIsPlayingAudio(false);
-        URL.revokeObjectURL(audioUrl);
-      };
-      
-      await audio.play();
-    } catch (err) {
-      console.error('Audio playback error:', err);
-      setIsPlayingAudio(false);
-    }
-  };
 
   return (
     <main className={`flex min-h-screen flex-col items-center p-4 ${fontSizeClass}`}>
@@ -173,8 +138,6 @@ export default function VoiceTranslatePage() {
             translatedText={translatedText}
             fromLang={currentLanguagePair.from}
             toLang={currentLanguagePair.to}
-            onPlayAudio={handlePlayAudio}
-            isPlayingAudio={isPlayingAudio}
           />
         )}
 

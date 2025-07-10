@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Volume2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Language, OfflinePhrase } from '@/lib/types';
 import { OFFLINE_PHRASES } from '@/lib/offline-data';
 
@@ -12,7 +12,6 @@ interface OfflinePhrasesProps {
 
 export default function OfflinePhrases({ fromLang, toLang }: OfflinePhrasesProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['sos']);
-  const [playingPhrase, setPlayingPhrase] = useState<string | null>(null);
 
   const categoryNames: Record<keyof typeof OFFLINE_PHRASES, string> = {
     sos: '🚨 SOS / Nagłe wypadki',
@@ -30,37 +29,6 @@ export default function OfflinePhrases({ fromLang, toLang }: OfflinePhrasesProps
     );
   };
 
-  const playAudio = async (text: string, language: Language) => {
-    if (playingPhrase) return;
-
-    setPlayingPhrase(text);
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, language }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Błąd podczas generowania audio');
-      }
-
-      const audioData = await response.arrayBuffer();
-      const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      const audio = new Audio(audioUrl);
-      audio.onended = () => {
-        setPlayingPhrase(null);
-        URL.revokeObjectURL(audioUrl);
-      };
-      
-      await audio.play();
-    } catch (err) {
-      console.error('Audio playback error:', err);
-      setPlayingPhrase(null);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -83,36 +51,8 @@ export default function OfflinePhrases({ fromLang, toLang }: OfflinePhrasesProps
               <div className="divide-y">
                 {phrases.map((phrase: OfflinePhrase, index: number) => (
                   <div key={index} className="p-4 hover:bg-gray-50">
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="text-gray-700">{phrase[fromLang]}</p>
-                      <button
-                        onClick={() => playAudio(phrase[fromLang], fromLang)}
-                        disabled={playingPhrase === phrase[fromLang]}
-                        className={`ml-2 p-1.5 rounded-lg transition-colors ${
-                          playingPhrase === phrase[fromLang]
-                            ? 'bg-blue-600 text-white'
-                            : 'hover:bg-gray-200'
-                        }`}
-                        aria-label="Odtwórz po polsku"
-                      >
-                        <Volume2 size={16} />
-                      </button>
-                    </div>
-                    <div className="flex justify-between items-start">
-                      <p className="font-semibold text-blue-600">{phrase[toLang]}</p>
-                      <button
-                        onClick={() => playAudio(phrase[toLang], toLang)}
-                        disabled={playingPhrase === phrase[toLang]}
-                        className={`ml-2 p-1.5 rounded-lg transition-colors ${
-                          playingPhrase === phrase[toLang]
-                            ? 'bg-blue-600 text-white'
-                            : 'hover:bg-gray-200'
-                        }`}
-                        aria-label={`Odtwórz w języku docelowym`}
-                      >
-                        <Volume2 size={16} />
-                      </button>
-                    </div>
+                    <p className="text-gray-700 mb-2">{phrase[fromLang]}</p>
+                    <p className="font-semibold text-blue-600">{phrase[toLang]}</p>
                   </div>
                 ))}
               </div>
