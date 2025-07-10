@@ -6,12 +6,13 @@ export const metadata: Metadata = {
   title: "TravelSpeak Family",
   description: "Prosta aplikacja do tłumaczenia dla całej rodziny",
   manifest: "/manifest.json",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: "#2563eb",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
 };
 
 export default function RootLayout({
