@@ -173,7 +173,7 @@ export default function Home() {
       <h1 className="text-6xl font-bold mb-2 text-white text-center drop-shadow-lg">
         🌍 TravelSpeak
       </h1>
-      <p className="text-white/70 text-sm mb-8">v2.0.0</p>
+      <p className="text-white/70 text-sm mb-8">v2.0.1</p>
       
       {/* Language swap button */}
       <button
