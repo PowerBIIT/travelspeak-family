@@ -12,53 +12,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-    
-    if (!DEEPSEEK_API_KEY) {
-      console.warn('DeepSeek API key not configured');
-      return NextResponse.json({ 
-        translation: `[Brak klucza API] ${text}`,
-        error: 'Brak konfiguracji DeepSeek API' 
-      });
-    }
-
-    const languageNames: Record<Language, string> = {
-      pl: 'Polish',
-      en: 'English',
-      fr: 'French',
+    // Use LibreTranslate - free and better quality
+    const languageCodes: Record<Language, string> = {
+      pl: 'pl',
+      en: 'en',
+      fr: 'fr',
     };
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a translator. Translate the following text from ${languageNames[from as Language]} to ${languageNames[to as Language]}. Return only the translation, no explanations.`,
-          },
-          {
-            role: 'user',
-            content: text,
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: 500,
-      }),
-    });
+    // Try multiple LibreTranslate instances for reliability
+    const libreTranslateInstances = [
+      'https://libretranslate.de',
+      'https://translate.argosopentech.com',
+      'https://libretranslate.com',
+    ];
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('DeepSeek API error:', errorData);
-      throw new Error('DeepSeek API error');
+    let translation = '';
+    let lastError = null;
+
+    for (const instance of libreTranslateInstances) {
+      try {
+        const response = await fetch(`${instance}/translate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            q: text,
+            source: languageCodes[from as Language],
+            target: languageCodes[to as Language],
+            format: 'text',
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          translation = data.translatedText;
+          break;
+        }
+      } catch (error) {
+        lastError = error;
+        console.log(`Failed with ${instance}, trying next...`);
+      }
     }
 
-    const data = await response.json();
-    const translation = data.choices[0].message.content.trim();
+    if (!translation) {
+      // Fallback to a simple API that doesn't require keys
+      try {
+        const fallbackResponse = await fetch(
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${languageCodes[from as Language]}|${languageCodes[to as Language]}`
+        );
+        
+        if (fallbackResponse.ok) {
+          const data = await fallbackResponse.json();
+          translation = data.responseData.translatedText;
+        }
+      } catch (error) {
+        console.error('All translation services failed:', error);
+        throw new Error('Translation services unavailable');
+      }
+    }
 
     return NextResponse.json({ translation });
   } catch (error) {

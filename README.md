@@ -14,9 +14,10 @@ Prosta aplikacja do tłumaczenia dla rodziny jadącej jutro do Europy. Pomaga w 
 
 ### 1. Przygotowanie (5 minut)
 
-Załóż konta:
-- [DeepSeek](https://platform.deepseek.com/api_keys) - tłumaczenia (10$ kredytu wystarczy na miesiące)
+Załóż konto tylko dla rozpoznawania mowy:
 - [AssemblyAI](https://www.assemblyai.com/app/account) - rozpoznawanie mowy (darmowe 416h/miesiąc)
+
+Tłumaczenia używają darmowego LibreTranslate - nie wymaga klucza API!
 
 ### 2. Deploy na Railway
 
@@ -30,7 +31,7 @@ railway up
 ### 3. Dodaj klucze API w Railway
 
 ```bash
-railway variables --set "DEEPSEEK_API_KEY=twój_klucz" --set "ASSEMBLYAI_API_KEY=twój_klucz"
+railway variables --set "ASSEMBLYAI_API_KEY=twój_klucz"
 railway up
 ```
 
