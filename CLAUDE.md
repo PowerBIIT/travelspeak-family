@@ -2,86 +2,58 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Recent Update - SUPER SIMPLE VERSION
+## Project Status
 
-The app has been completely simplified to ONE core feature: real-time conversation translation.
+Starting fresh - building the app from scratch.
 
-### What's new:
-- ✅ ONE SCREEN - no navigation, no menus
-- ✅ TWO BIG BUTTONS - one for each speaker (hold to record)
-- ✅ Automatic flow: Record → Transcribe → Translate → Play audio
-- ✅ Uses latest OpenAI APIs:
-  - Whisper for speech-to-text
-  - GPT-4 for contextual translation
-  - TTS API for natural voice synthesis
-- ✅ Click flags to change languages (PL/EN/FR)
-- ✅ Still works as PWA on phones
+## Requirements
 
-### Removed features:
-- ❌ Text translation page
-- ❌ Offline phrases
-- ❌ History
-- ❌ User profiles
-- ❌ All complexity!
+### Core Functionality
+- **ONE SCREEN** - Single page app with no navigation
+- **REAL-TIME TRANSLATION** - Hold button to speak, automatic translation and playback
+- **SIMPLE UI** - Ultra simple interface for family traveling in Europe
+- **LANGUAGES** - Polish, English, French (switchable by clicking flags)
 
-## Project Overview
+### Technical Requirements
+- Use latest OpenAI APIs:
+  - Whisper API for speech-to-text
+  - GPT-4 Turbo for translation
+  - OpenAI TTS API for text-to-speech
+- Next.js 14 with App Router
+- Deploy to Railway
+- Works as PWA on mobile phones
+- NO TypeScript - use plain JavaScript
+- Minimal dependencies
 
-TravelSpeak Family is now an ultra-simple translation app for families traveling in Europe. Just hold a button, speak, and hear the translation!
+### User Flow
+1. User selects their language (click flag to cycle: PL → EN → FR → PL)
+2. Hold the big button to record
+3. Release to stop recording
+4. App automatically:
+   - Transcribes speech (Whisper)
+   - Translates to target languages (GPT-4)
+   - Plays translation audio (TTS)
+5. Other person responds using the same button
 
-## Tech Stack
+### Design
+- Modern gradient background
+- Large, touch-friendly button (hold to record)
+- Flag selection at top
+- Show transcription and translation results
+- Minimal text, maximum clarity
 
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Deployment**: Railway
-- **APIs**: OpenAI (Whisper, GPT-4, TTS)
-
-## Environment Variables
-
-```bash
-OPENAI_API_KEY=your_openai_api_key_here
+### Environment Variables
+```
+OPENAI_API_KEY=your_key_here
 ```
 
-IMPORTANT: In Railway, DO NOT add quotes around the API key value!
-
-## Project Structure (Simplified)
-
-```
-/app
-  /page.tsx               # The ONLY page - conversation translator
-  /api
-    /whisper/route.ts     # OpenAI Whisper (speech-to-text)
-    /translate-gpt/route.ts # OpenAI GPT-4 (translation)
-    /tts-openai/route.ts  # OpenAI TTS (text-to-speech)
-```
-
-## How it works
-
-1. User holds their language button and speaks
-2. Whisper API converts speech to text
-3. GPT-4 translates the text contextually
-4. TTS API generates natural speech
-5. Translation plays automatically
-6. Other person responds using their button
-
-## Deployment
-
-```bash
-# Install dependencies
-npm install
-
-# Run locally
-npm run dev
-
-# Build for production
-npm run build
-
-# Deploy to Railway
-# (Railway automatically deploys from GitHub)
-```
+### Deployment Notes
+- Railway automatically deploys from GitHub
+- In Railway environment variables, DO NOT use quotes around values
+- Use port from environment: `process.env.PORT || 3000`
 
 ## Success Metrics
-
-- Grandma successfully orders coffee in Paris
-- Kids can ask for directions without parents
-- Real conversations happen, not just phrase repetition
+- Grandma can order coffee in Paris without help
+- Kids can ask for directions in London
+- Real conversations happen naturally
+- No manual or instructions needed
