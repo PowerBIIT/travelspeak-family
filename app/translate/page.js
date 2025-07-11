@@ -27,6 +27,8 @@ export default function TranslatePage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(false);
   const [ocrResult, setOcrResult] = useState(null);
+  const [showOcrResult, setShowOcrResult] = useState(false);
+  const [ocrAutoRead, setOcrAutoRead] = useState(true);
   
   const mediaRecorderRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -154,18 +156,10 @@ export default function TranslatePage() {
         setError(data.error);
       } else {
         setOcrResult(data);
+        setShowOcrResult(true);
         
-        // Ustaw tłumaczenie jak przy normalnym tłumaczeniu
-        setLastTranslation({
-          original: data.original_text,
-          translated: data.translated_text,
-          from: data.detected_language || 'unknown',
-          to: data.targetLang,
-          isFromOCR: true
-        });
-        
-        // Odtwórz audio jeśli jest tłumaczenie
-        if (data.translated_text) {
+        // Odtwórz audio jeśli użytkownik wybrał opcję czytania
+        if (ocrAutoRead && data.translated_text) {
           await playTranslation(data.translated_text, data.targetLang);
         }
       }
@@ -830,6 +824,110 @@ export default function TranslatePage() {
       fontWeight: 'bold',
       transition: 'all 0.2s',
     },
+    ocrResultOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: '#ffffff',
+      zIndex: 3000,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    },
+    ocrResultHeader: {
+      background: 'linear-gradient(to right, #4f46e5, #9333ea)',
+      color: 'white',
+      padding: '1rem',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+    },
+    ocrResultTitle: {
+      fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
+      fontWeight: 'bold',
+    },
+    ocrResultClose: {
+      background: 'rgba(255, 255, 255, 0.2)',
+      border: 'none',
+      borderRadius: '50%',
+      width: '40px',
+      height: '40px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '1.5rem',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+    },
+    ocrResultContent: {
+      flex: 1,
+      padding: 'clamp(1rem, 4vw, 2rem)',
+      overflow: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2rem',
+    },
+    ocrResultSection: {
+      background: '#f3f4f6',
+      borderRadius: '1rem',
+      padding: 'clamp(1rem, 3vw, 1.5rem)',
+    },
+    ocrResultLabel: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      marginBottom: '1rem',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
+      color: '#6b7280',
+      fontWeight: 'bold',
+    },
+    ocrResultText: {
+      fontSize: 'clamp(1.25rem, 3.5vw, 1.75rem)',
+      lineHeight: 1.6,
+      color: '#1f2937',
+      wordBreak: 'break-word',
+    },
+    ocrResultActions: {
+      padding: '1rem',
+      background: 'white',
+      borderTop: '1px solid #e5e7eb',
+      display: 'flex',
+      gap: '1rem',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+    },
+    ocrActionButton: {
+      padding: '1rem 2rem',
+      borderRadius: '2rem',
+      border: 'none',
+      fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
+      fontWeight: 'bold',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      minHeight: '48px',
+    },
+    ocrOptions: {
+      display: 'flex',
+      gap: '1rem',
+      marginBottom: '1rem',
+      justifyContent: 'center',
+    },
+    ocrOptionButton: {
+      padding: '0.75rem 1.5rem',
+      borderRadius: '0.5rem',
+      border: '2px solid transparent',
+      cursor: 'pointer',
+      fontSize: '1rem',
+      fontWeight: 'bold',
+      transition: 'all 0.2s',
+      background: 'white',
+    },
   };
 
   return (
@@ -1191,6 +1289,36 @@ export default function TranslatePage() {
               />
             )}
             
+            {/* Opcje przetwarzania */}
+            <div style={styles.ocrOptions}>
+              <button
+                onClick={() => setOcrAutoRead(false)}
+                style={{
+                  ...styles.ocrOptionButton,
+                  ...(ocrAutoRead === false && {
+                    borderColor: '#4f46e5',
+                    background: '#ede9fe',
+                    color: '#4f46e5'
+                  })
+                }}
+              >
+                📄 Tylko tłumacz
+              </button>
+              <button
+                onClick={() => setOcrAutoRead(true)}
+                style={{
+                  ...styles.ocrOptionButton,
+                  ...(ocrAutoRead === true && {
+                    borderColor: '#4f46e5',
+                    background: '#ede9fe',
+                    color: '#4f46e5'
+                  })
+                }}
+              >
+                📄🔊 Tłumacz i czytaj
+              </button>
+            </div>
+            
             {/* Przyciski akcji */}
             <div style={styles.ocrButtons}>
               <button
@@ -1219,6 +1347,86 @@ export default function TranslatePage() {
                 {ocrProcessing ? 'Przetwarzam...' : 'Czytaj i tłumacz'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pełnoekranowe wyświetlanie wyników OCR */}
+      {showOcrResult && ocrResult && (
+        <div style={styles.ocrResultOverlay}>
+          <div style={styles.ocrResultHeader}>
+            <h2 style={styles.ocrResultTitle}>Tłumaczenie ze zdjęcia</h2>
+            <button
+              onClick={() => {
+                setShowOcrResult(false);
+                setOcrResult(null);
+              }}
+              style={styles.ocrResultClose}
+              onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.3)'}
+              onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+            >
+              ×
+            </button>
+          </div>
+          
+          <div style={styles.ocrResultContent}>
+            {/* Oryginalny tekst */}
+            <div style={styles.ocrResultSection}>
+              <div style={styles.ocrResultLabel}>
+                <span>{languages[ocrResult.detected_language]?.flag || '🌐'}</span>
+                <span>Rozpoznany tekst:</span>
+              </div>
+              <div style={styles.ocrResultText}>
+                {ocrResult.original_text}
+              </div>
+            </div>
+            
+            {/* Tłumaczenie */}
+            <div style={styles.ocrResultSection}>
+              <div style={styles.ocrResultLabel}>
+                <span>{languages[ocrResult.targetLang]?.flag || '🌐'}</span>
+                <span>Tłumaczenie:</span>
+              </div>
+              <div style={styles.ocrResultText}>
+                {ocrResult.translated_text}
+              </div>
+            </div>
+          </div>
+          
+          {/* Przyciski akcji */}
+          <div style={styles.ocrResultActions}>
+            <button
+              onClick={async () => {
+                if (ocrResult.translated_text) {
+                  await playTranslation(ocrResult.translated_text, ocrResult.targetLang);
+                }
+              }}
+              style={{
+                ...styles.ocrActionButton,
+                background: '#4f46e5',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#3730a3'}
+              onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+            >
+              🔊 Odtwórz tłumaczenie
+            </button>
+            
+            <button
+              onClick={() => {
+                setShowOcrResult(false);
+                setOcrResult(null);
+              }}
+              style={{
+                ...styles.ocrActionButton,
+                background: '#ef4444',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#dc2626'}
+              onMouseLeave={(e) => e.target.style.background = '#ef4444'}
+            >
+              🏠 Powrót do głównej
+            </button>
           </div>
         </div>
       )}
