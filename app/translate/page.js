@@ -21,7 +21,15 @@ export default function TranslatePage() {
   const [conversationLangs, setConversationLangs] = useState(['pl', 'fr']);
   const [detectedLanguage, setDetectedLanguage] = useState(null);
   
+  // Nowe stany dla OCR
+  const [showOCR, setShowOCR] = useState(false);
+  const [ocrEnabled, setOcrEnabled] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [ocrProcessing, setOcrProcessing] = useState(false);
+  const [ocrResult, setOcrResult] = useState(null);
+  
   const mediaRecorderRef = useRef(null);
+  const fileInputRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -43,6 +51,7 @@ export default function TranslatePage() {
   useEffect(() => {
     checkMicrophonePermission();
     loadOfflinePhrases();
+    checkOCRFeature();
     
     return () => {
       // Cleanup przy odmontowywaniu
@@ -75,6 +84,98 @@ export default function TranslatePage() {
       setOfflinePhrases(data);
     } catch (error) {
       console.error('Failed to load offline phrases:', error);
+    }
+  };
+
+  const checkOCRFeature = async () => {
+    try {
+      const response = await fetch('/api/ocr');
+      const data = await response.json();
+      setOcrEnabled(data.enabled);
+    } catch (error) {
+      console.error('Failed to check OCR feature:', error);
+      setOcrEnabled(false);
+    }
+  };
+
+  const handleImageSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Sprawdź rozmiar pliku (max 4MB)
+      if (file.size > 4 * 1024 * 1024) {
+        setError('Obraz jest za duży. Maksymalny rozmiar to 4MB');
+        return;
+      }
+      
+      // Sprawdź typ pliku
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setError('Nieobsługiwany format. Użyj JPEG, PNG lub WebP');
+        return;
+      }
+      
+      setSelectedImage(file);
+      setShowOCR(true);
+      setError('');
+      
+      // Pokaż podgląd
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        // Możemy dodać podgląd obrazu później
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const processOCR = async () => {
+    if (!selectedImage) return;
+    
+    setOcrProcessing(true);
+    setError('');
+    setOcrResult(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', selectedImage);
+      formData.append('targetLang', conversationMode ? conversationLangs[0] : targetLang);
+      
+      const response = await fetch('/api/ocr', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Błąd przetwarzania obrazu');
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setOcrResult(data);
+        
+        // Ustaw tłumaczenie jak przy normalnym tłumaczeniu
+        setLastTranslation({
+          original: data.original_text,
+          translated: data.translated_text,
+          from: data.detected_language || 'unknown',
+          to: data.targetLang,
+          isFromOCR: true
+        });
+        
+        // Odtwórz audio jeśli jest tłumaczenie
+        if (data.translated_text) {
+          await playTranslation(data.translated_text, data.targetLang);
+        }
+      }
+    } catch (error) {
+      console.error('OCR processing error:', error);
+      setError(error.message || 'Wystąpił błąd podczas przetwarzania obrazu');
+    } finally {
+      setOcrProcessing(false);
+      setShowOCR(false);
+      setSelectedImage(null);
     }
   };
 
@@ -647,6 +748,88 @@ export default function TranslatePage() {
       flexWrap: 'wrap',
       justifyContent: 'center',
     },
+    actionButtons: {
+      display: 'flex',
+      gap: '1rem',
+      marginTop: '1.5rem',
+      marginBottom: '1rem',
+    },
+    cameraButton: {
+      background: 'rgba(255, 255, 255, 0.95)',
+      borderRadius: '1rem',
+      padding: '1rem 1.5rem',
+      cursor: 'pointer',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '0.5rem',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+      transition: 'all 0.2s',
+      border: 'none',
+      minWidth: '100px',
+    },
+    cameraIcon: {
+      fontSize: 'clamp(2rem, 5vw, 2.5rem)',
+    },
+    cameraText: {
+      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+      color: '#4f46e5',
+      fontWeight: 'bold',
+    },
+    ocrModal: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem',
+      zIndex: 2000,
+    },
+    ocrContent: {
+      background: 'white',
+      borderRadius: '1rem',
+      padding: '1.5rem',
+      maxWidth: '500px',
+      width: '100%',
+      maxHeight: '80vh',
+      overflow: 'auto',
+    },
+    ocrHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '1rem',
+    },
+    ocrTitle: {
+      fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
+      fontWeight: 'bold',
+      color: '#1f2937',
+    },
+    imagePreview: {
+      width: '100%',
+      maxHeight: '300px',
+      objectFit: 'contain',
+      borderRadius: '0.5rem',
+      marginBottom: '1rem',
+    },
+    ocrButtons: {
+      display: 'flex',
+      gap: '0.5rem',
+      justifyContent: 'flex-end',
+    },
+    ocrButton: {
+      padding: '0.75rem 1.5rem',
+      borderRadius: '0.5rem',
+      border: 'none',
+      cursor: 'pointer',
+      fontSize: '1rem',
+      fontWeight: 'bold',
+      transition: 'all 0.2s',
+    },
   };
 
   return (
@@ -666,7 +849,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.6.0</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.7.0</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -818,6 +1001,35 @@ export default function TranslatePage() {
           </div>
         </button>
 
+        {/* Przyciski akcji - mikrofon i aparat */}
+        <div style={styles.actionButtons}>
+          {ocrEnabled && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageSelect}
+                style={{ display: 'none' }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing || ocrProcessing}
+                style={{
+                  ...styles.cameraButton,
+                  ...(ocrProcessing && { opacity: 0.5, cursor: 'not-allowed' })
+                }}
+                title="Zrób zdjęcie lub wybierz z galerii"
+              >
+                <div style={styles.cameraIcon}>📷</div>
+                <div style={styles.cameraText}>
+                  {ocrProcessing ? 'Czytam...' : 'Zdjęcie'}
+                </div>
+              </button>
+            </>
+          )}
+        </div>
+
         <div style={styles.status}>
           {isProcessing && 'Tłumaczę...'}
           {!isProcessing && !error && !lastTranslation && (
@@ -841,7 +1053,7 @@ export default function TranslatePage() {
             <div style={styles.translationSection}>
               <div style={styles.translationLabel}>
                 <span>{languages[lastTranslation.from]?.flag || '🌐'}</span>
-                <span>Usłyszałem:</span>
+                <span>{lastTranslation.isFromOCR ? 'Rozpoznany tekst:' : 'Usłyszałem:'}</span>
               </div>
               <div style={styles.translationText}>
                 {lastTranslation.original}
@@ -948,6 +1160,64 @@ export default function TranslatePage() {
                 })}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal OCR */}
+      {showOCR && selectedImage && (
+        <div style={styles.ocrModal} onClick={() => setShowOCR(false)}>
+          <div style={styles.ocrContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.ocrHeader}>
+              <h2 style={styles.ocrTitle}>Rozpoznawanie tekstu</h2>
+              <button
+                onClick={() => {
+                  setShowOCR(false);
+                  setSelectedImage(null);
+                }}
+                style={styles.closeButton}
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Podgląd obrazu */}
+            {selectedImage && (
+              <img
+                src={URL.createObjectURL(selectedImage)}
+                alt="Wybrany obraz"
+                style={styles.imagePreview}
+              />
+            )}
+            
+            {/* Przyciski akcji */}
+            <div style={styles.ocrButtons}>
+              <button
+                onClick={() => {
+                  setShowOCR(false);
+                  setSelectedImage(null);
+                }}
+                style={{
+                  ...styles.ocrButton,
+                  background: '#e5e7eb',
+                  color: '#6b7280'
+                }}
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={processOCR}
+                disabled={ocrProcessing}
+                style={{
+                  ...styles.ocrButton,
+                  background: ocrProcessing ? '#e5e7eb' : '#4f46e5',
+                  color: 'white',
+                  cursor: ocrProcessing ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {ocrProcessing ? 'Przetwarzam...' : 'Czytaj i tłumacz'}
+              </button>
+            </div>
           </div>
         </div>
       )}
