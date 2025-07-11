@@ -1009,6 +1009,7 @@ export default function TranslatePage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                capture="environment"
                 onChange={handleImageSelect}
                 style={{ display: 'none' }}
               />
