@@ -89,6 +89,7 @@ export function middleware(request) {
     response.headers.set('X-RateLimit-Limit', String(limit.requests));
     response.headers.set('X-RateLimit-Remaining', String(limit.requests - userLimit.count));
     response.headers.set('X-RateLimit-Reset', String(userLimit.resetTime));
+    return response;
   }
 
   // Ścieżki które nie wymagają autentykacji
