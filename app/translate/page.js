@@ -28,9 +28,6 @@ export default function TranslatePage() {
   const [ocrResult, setOcrResult] = useState(null);
   const [showOcrResult, setShowOcrResult] = useState(false);
   
-  // Stany dla limitów i kosztów
-  const [statusInfo, setStatusInfo] = useState(null);
-  const [showStatusDetails, setShowStatusDetails] = useState(false);
   
   const mediaRecorderRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -58,13 +55,8 @@ export default function TranslatePage() {
     checkMicrophonePermission();
     loadOfflinePhrases();
     checkOCRFeature();
-    fetchStatus(); // Pobierz początkowy status
-    
-    // Odświeżaj status co 30 sekund
-    const interval = setInterval(fetchStatus, 30000);
     
     return () => {
-      clearInterval(interval);
       // Cleanup przy odmontowywaniu
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -109,18 +101,6 @@ export default function TranslatePage() {
     }
   };
   
-  // Funkcja do pobierania statusu limitów i kosztów
-  const fetchStatus = async () => {
-    try {
-      const response = await fetch('/api/status');
-      if (response.ok) {
-        const data = await response.json();
-        setStatusInfo(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch status:', error);
-    }
-  };
 
   const handleImageSelect = async (event) => {
     const file = event.target.files[0];
@@ -331,7 +311,6 @@ export default function TranslatePage() {
           } else {
             setError(errorData.error || 'Przekroczono limit zapytań. Spróbuj ponownie później.');
           }
-          fetchStatus(); // Odśwież status
         } else {
           setError(errorData.error || 'Błąd rozpoznawania mowy');
         }
@@ -383,7 +362,6 @@ export default function TranslatePage() {
           } else {
             setError(errorData.error || 'Przekroczono limit tłumaczeń. Spróbuj ponownie później.');
           }
-          fetchStatus(); // Odśwież status
         } else {
           setError(errorData.error || 'Błąd tłumaczenia');
         }
@@ -1015,113 +993,8 @@ export default function TranslatePage() {
         }
       `}</style>
       <div style={styles.container}>
-      {/* Status Bar */}
-      {statusInfo && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: statusInfo.alerts.dailyLimitClose ? '#dc2626' : 
-                          statusInfo.alerts.costWarning ? '#f59e0b' : '#10b981',
-          color: 'white',
-          padding: '8px',
-          textAlign: 'center',
-          fontSize: '14px',
-          zIndex: 1000,
-          cursor: 'pointer',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-        }}
-        onClick={() => setShowStatusDetails(!showStatusDetails)}>
-          💰 Dzienny koszt: ${statusInfo.costs.daily.used.toFixed(2)} / ${statusInfo.costs.daily.limit} 
-          ({statusInfo.costs.daily.percentage}%) | 
-          🔢 Pozostało tłumaczeń: {statusInfo.rateLimits.translate?.remaining || 0}
-          {statusInfo.alerts.dailyLimitClose && ' ⚠️ UWAGA: Zbliżasz się do limitu!'}
-        </div>
-      )}
       
-      {/* Szczegóły statusu */}
-      {showStatusDetails && statusInfo && (
-        <div style={{
-          position: 'fixed',
-          top: statusInfo ? '40px' : '0',
-          left: 0,
-          right: 0,
-          backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          padding: '16px',
-          zIndex: 999,
-          maxHeight: '50vh',
-          overflowY: 'auto'
-        }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600' }}>
-            📊 Status limitów i kosztów
-          </h3>
-          
-          <div style={{ display: 'grid', gap: '12px' }}>
-            {/* Koszty */}
-            <div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>💰 Koszty</h4>
-              <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
-                <div>Dzienny: ${statusInfo.costs.daily.used.toFixed(2)} / ${statusInfo.costs.daily.limit} 
-                  <span style={{ color: statusInfo.costs.daily.percentage > 80 ? '#dc2626' : '#059669' }}>
-                    {' '}({statusInfo.costs.daily.percentage}%)
-                  </span>
-                </div>
-                <div>Godzinowy: ${statusInfo.costs.hourly.used.toFixed(2)} / ${statusInfo.costs.hourly.limit}
-                  <span style={{ color: statusInfo.costs.hourly.percentage > 80 ? '#dc2626' : '#059669' }}>
-                    {' '}({statusInfo.costs.hourly.percentage}%)
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Rate Limity */}
-            <div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>🔢 Limity zapytań (na godzinę)</h4>
-              <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
-                <div>Tłumaczenia: {statusInfo.rateLimits.translate?.remaining || 0} pozostało</div>
-                <div>Nagrywanie: {statusInfo.rateLimits.whisper?.remaining || 0} pozostało</div>
-                <div>Odtwarzanie: {statusInfo.rateLimits.tts?.remaining || 0} pozostało</div>
-                {ocrEnabled && <div>OCR: {statusInfo.rateLimits.ocr?.remaining || 0} pozostało</div>}
-              </div>
-            </div>
-            
-            {/* Alerty */}
-            {(statusInfo.alerts.costWarning || statusInfo.alerts.dailyLimitClose) && (
-              <div style={{ 
-                backgroundColor: '#fef3c7', 
-                border: '1px solid #fcd34d',
-                borderRadius: '4px',
-                padding: '8px',
-                fontSize: '13px'
-              }}>
-                ⚠️ <strong>Uwaga:</strong> 
-                {statusInfo.alerts.dailyLimitClose && ' Zbliżasz się do dziennego limitu kosztów!'}
-                {statusInfo.alerts.costWarning && ' Przekroczono próg alertu kosztów!'}
-              </div>
-            )}
-          </div>
-          
-          <button 
-            onClick={() => setShowStatusDetails(false)}
-            style={{
-              marginTop: '12px',
-              padding: '6px 12px',
-              backgroundColor: '#6b7280',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}>
-            Zamknij
-          </button>
-        </div>
-      )}
-      
-      <header style={{...styles.header, marginTop: statusInfo ? '40px' : '0'}}>
+      <header style={styles.header}>
         <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.8.0</span></h1>
         <button 
           onClick={handleLogout}
