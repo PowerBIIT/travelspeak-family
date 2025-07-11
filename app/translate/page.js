@@ -34,7 +34,7 @@ export default function TranslatePage() {
     en: { name: 'English', flag: '🇬🇧' },
     fr: { name: 'Français', flag: '🇫🇷' },
   };
-
+  
   const getTargetLanguages = (sourceLang) => {
     return Object.keys(languages).filter(lang => lang !== sourceLang);
   };
@@ -224,16 +224,18 @@ export default function TranslatePage() {
       if (conversationMode && detected) {
         // Ustaw wykryty język
         setDetectedLanguage(detected);
-        actualSourceLang = detected;
         
         // Automatycznie wybierz język docelowy
         if (conversationLangs.includes(detected)) {
           // Znajdź drugi język z pary
+          actualSourceLang = detected;
           actualTargetLang = conversationLangs.find(lang => lang !== detected);
         } else {
-          // Jeśli wykryto język spoza pary, użyj pierwszego z pary jako domyślnego
-          console.warn(`Wykryto język ${detected} spoza wybranej pary`);
-          actualTargetLang = conversationLangs.find(lang => lang !== detected) || conversationLangs[0];
+          // Jeśli wykryto język spoza pary, załóż że to pierwszy język z pary (może być zniekształcony)
+          console.warn(`Wykryto język ${detected} spoza wybranej pary [${conversationLangs.join(', ')}]`);
+          // Używamy domyślnego języka źródłowego z pary
+          actualSourceLang = conversationLangs[0];
+          actualTargetLang = conversationLangs[1];
         }
       }
       
@@ -257,8 +259,8 @@ export default function TranslatePage() {
       setLastTranslation({
         original: text,
         translated: translation,
-        from: actualSourceLang,
-        to: actualTargetLang,
+        from: actualSourceLang || 'unknown',
+        to: actualTargetLang || 'unknown',
         detectedLanguage: detected,
       });
       
@@ -739,8 +741,8 @@ export default function TranslatePage() {
                 }}
                 style={styles.langButton(true)}
               >
-                <span style={styles.flag}>{languages[conversationLangs[0]].flag}</span>
-                <span style={styles.langName(true)}>{languages[conversationLangs[0]].name}</span>
+                <span style={styles.flag}>{languages[conversationLangs[0]]?.flag || '🌐'}</span>
+                <span style={styles.langName(true)}>{languages[conversationLangs[0]]?.name || conversationLangs[0]}</span>
               </button>
               
               <div style={styles.conversationArrow}>↔️</div>
@@ -753,13 +755,13 @@ export default function TranslatePage() {
                 }}
                 style={styles.langButton(true)}
               >
-                <span style={styles.flag}>{languages[conversationLangs[1]].flag}</span>
-                <span style={styles.langName(true)}>{languages[conversationLangs[1]].name}</span>
+                <span style={styles.flag}>{languages[conversationLangs[1]]?.flag || '🌐'}</span>
+                <span style={styles.langName(true)}>{languages[conversationLangs[1]]?.name || conversationLangs[1]}</span>
               </button>
             </div>
             {detectedLanguage && (
               <div style={styles.detectedLanguage}>
-                Wykryto: {languages[detectedLanguage]?.flag} {languages[detectedLanguage]?.name || detectedLanguage}
+                Wykryto: {languages[detectedLanguage]?.flag || '🌐'} {languages[detectedLanguage]?.name || detectedLanguage}
               </div>
             )}
           </div>
@@ -801,7 +803,7 @@ export default function TranslatePage() {
           {!isProcessing && !error && !lastTranslation && (
             <div>
               {conversationMode ? (
-                <>Mów w jednym z języków: <strong>{languages[conversationLangs[0]].flag} lub {languages[conversationLangs[1]].flag}</strong></>
+                <>Mów w jednym z języków: <strong>{languages[conversationLangs[0]]?.flag || '🌐'} lub {languages[conversationLangs[1]]?.flag || '🌐'}</strong></>
               ) : (
                 <>Mów w języku: <strong>{languages[sourceLang].flag} {languages[sourceLang].name}</strong></>
               )}
@@ -818,7 +820,7 @@ export default function TranslatePage() {
           <div style={styles.translation}>
             <div style={styles.translationSection}>
               <div style={styles.translationLabel}>
-                <span>{languages[lastTranslation.from].flag}</span>
+                <span>{languages[lastTranslation.from]?.flag || '🌐'}</span>
                 <span>Usłyszałem:</span>
               </div>
               <div style={styles.translationText}>
@@ -830,7 +832,7 @@ export default function TranslatePage() {
             
             <div style={styles.translationSection}>
               <div style={styles.translationLabel}>
-                <span>{languages[lastTranslation.to].flag}</span>
+                <span>{languages[lastTranslation.to]?.flag || '🌐'}</span>
                 <span>Tłumaczenie:</span>
               </div>
               <div style={styles.translationText}>
