@@ -35,6 +35,8 @@ export default function TranslatePage() {
   const timeoutRef = useRef(null);
   const intervalRef = useRef(null);
   const isRecordingRef = useRef(false);
+  const currentAudioRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const router = useRouter();
 
   const languages = {
@@ -363,7 +365,10 @@ export default function TranslatePage() {
   };
 
   const playTranslation = async (text, language) => {
-    // Jeśli istnieje poprzednie audio, usuń je
+    // Zatrzymaj poprzednie audio jeśli gra
+    stopAudio();
+    
+    // Jeśli istnieje poprzednie audio URL, usuń je
     if (lastAudioUrl) {
       URL.revokeObjectURL(lastAudioUrl);
     }
@@ -381,18 +386,43 @@ export default function TranslatePage() {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // Zapisz URL do ponownego odtworzenia
+      // Zapisz referencję do audio
+      currentAudioRef.current = audio;
       setLastAudioUrl(audioUrl);
+      
+      // Ustaw handlery
+      audio.onplay = () => setIsPlaying(true);
+      audio.onpause = () => setIsPlaying(false);
+      audio.onended = () => setIsPlaying(false);
       
       await audio.play();
     } catch (error) {
       console.error('Error playing audio:', error);
+      setIsPlaying(false);
+    }
+  };
+
+  const stopAudio = () => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      setIsPlaying(false);
     }
   };
 
   const replayAudio = () => {
     if (lastAudioUrl) {
+      // Zatrzymaj poprzednie audio
+      stopAudio();
+      
       const audio = new Audio(lastAudioUrl);
+      currentAudioRef.current = audio;
+      
+      // Ustaw handlery
+      audio.onplay = () => setIsPlaying(true);
+      audio.onpause = () => setIsPlaying(false);
+      audio.onended = () => setIsPlaying(false);
+      
       audio.play();
     }
   };
@@ -1164,16 +1194,26 @@ export default function TranslatePage() {
               <div style={styles.translationButtons}>
                 {lastAudioUrl && (
                   <button
-                    onClick={replayAudio}
-                    style={styles.replayButton}
-                    onMouseEnter={(e) => e.target.style.background = '#3730a3'}
-                    onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+                    onClick={() => {
+                      if (isPlaying) {
+                        stopAudio();
+                      } else {
+                        replayAudio();
+                      }
+                    }}
+                    style={{
+                      ...styles.replayButton,
+                      ...(isPlaying && { background: '#ef4444' })
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = isPlaying ? '#dc2626' : '#3730a3'}
+                    onMouseLeave={(e) => e.target.style.background = isPlaying ? '#ef4444' : '#4f46e5'}
                   >
-                    🔊 Odtwórz ponownie
+                    {isPlaying ? '⏹️ Zatrzymaj' : '🔊 Odtwórz ponownie'}
                   </button>
                 )}
                 <button
                   onClick={() => {
+                    stopAudio();
                     setLastTranslation(null);
                     setError('');
                     setDetectedLanguage(null);
@@ -1263,6 +1303,7 @@ export default function TranslatePage() {
             <h2 style={styles.ocrResultTitle}>Tłumaczenie ze zdjęcia</h2>
             <button
               onClick={() => {
+                stopAudio();
                 setShowOcrResult(false);
                 setOcrResult(null);
               }}
@@ -1302,23 +1343,26 @@ export default function TranslatePage() {
           <div style={styles.ocrResultActions}>
             <button
               onClick={async () => {
-                if (ocrResult.translated_text) {
+                if (isPlaying) {
+                  stopAudio();
+                } else if (ocrResult.translated_text) {
                   await playTranslation(ocrResult.translated_text, ocrResult.targetLang);
                 }
               }}
               style={{
                 ...styles.ocrActionButton,
-                background: '#4f46e5',
+                background: isPlaying ? '#ef4444' : '#4f46e5',
                 color: 'white'
               }}
-              onMouseEnter={(e) => e.target.style.background = '#3730a3'}
-              onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+              onMouseEnter={(e) => e.target.style.background = isPlaying ? '#dc2626' : '#3730a3'}
+              onMouseLeave={(e) => e.target.style.background = isPlaying ? '#ef4444' : '#4f46e5'}
             >
-              🔊 Odtwórz tłumaczenie
+              {isPlaying ? '⏹️ Zatrzymaj' : '🔊 Odtwórz tłumaczenie'}
             </button>
             
             <button
               onClick={() => {
+                stopAudio();
                 setShowOcrResult(false);
                 setOcrResult(null);
               }}
