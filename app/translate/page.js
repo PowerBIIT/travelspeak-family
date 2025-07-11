@@ -9,9 +9,15 @@ export default function TranslatePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastTranslation, setLastTranslation] = useState(null);
   const [error, setError] = useState('');
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [hasPermission, setHasPermission] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const intervalRef = useRef(null);
+  const isRecordingRef = useRef(false);
   const router = useRouter();
 
   const languages = {
@@ -24,9 +30,42 @@ export default function TranslatePage() {
     return Object.keys(languages).filter(lang => lang !== sourceLang);
   };
 
+  // Sprawdzanie uprawnień do mikrofonu przy starcie
+  useEffect(() => {
+    checkMicrophonePermission();
+    
+    return () => {
+      // Cleanup przy odmontowywaniu
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const checkMicrophonePermission = async () => {
+    try {
+      const result = await navigator.permissions.query({ name: 'microphone' });
+      setHasPermission(result.state === 'granted');
+      
+      result.addEventListener('change', () => {
+        setHasPermission(result.state === 'granted');
+      });
+    } catch (error) {
+      console.log('Permission API not supported, will check on first use');
+      setHasPermission(true); // Assume true, will check on actual use
+    }
+  };
+
   const startRecording = async () => {
+    // Zabezpieczenie przed wielokrotnym startem
+    if (isRecordingRef.current) return;
+    
     try {
       setError('');
+      setRecordingTime(0);
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -35,11 +74,20 @@ export default function TranslatePage() {
         } 
       });
       
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
-        ? 'audio/webm' 
+      streamRef.current = stream;
+      setHasPermission(true);
+      
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
         : 'audio/mp4';
       
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const mediaRecorder = new MediaRecorder(stream, { 
+        mimeType,
+        audioBitsPerSecond: 128000 
+      });
+      
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
@@ -50,23 +98,64 @@ export default function TranslatePage() {
       };
       
       mediaRecorder.onstop = async () => {
+        // Czyszczenie strumienia
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        
+        // Czyszczenie timerów
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        
+        setRecordingTime(0);
+        
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        stream.getTracks().forEach(track => track.stop());
-        await processRecording(audioBlob);
+        if (audioBlob.size > 0) {
+          await processRecording(audioBlob);
+        }
       };
       
-      mediaRecorder.start();
+      mediaRecorder.start(100); // Chunk co 100ms
       setIsRecording(true);
+      isRecordingRef.current = true;
+      
+      // Timer 30 sekund
+      timeoutRef.current = setTimeout(() => {
+        stopRecording();
+      }, 30000);
+      
+      // Licznik czasu
+      intervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
     } catch (error) {
       console.error('Error accessing microphone:', error);
-      setError('Nie mogę uzyskać dostępu do mikrofonu. Sprawdź uprawnienia.');
+      isRecordingRef.current = false;
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setError('Brak dostępu do mikrofonu. Nadaj uprawnienia w ustawieniach przeglądarki.');
+        setHasPermission(false);
+      } else if (error.name === 'NotFoundError') {
+        setError('Nie znaleziono mikrofonu. Sprawdź czy urządzenie jest podłączone.');
+      } else {
+        setError('Nie mogę uzyskać dostępu do mikrofonu. Spróbuj ponownie.');
+      }
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      isRecordingRef.current = false;
     }
   };
 
@@ -80,6 +169,12 @@ export default function TranslatePage() {
       formData.append('audio', audioBlob);
       formData.append('language', activeLang);
       
+      console.log('Sending audio to Whisper:', {
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type,
+        language: activeLang
+      });
+      
       const whisperResponse = await fetch('/api/whisper', {
         method: 'POST',
         body: formData,
@@ -87,6 +182,7 @@ export default function TranslatePage() {
       
       if (!whisperResponse.ok) {
         const errorData = await whisperResponse.json();
+        console.error('Whisper API error:', errorData);
         throw new Error(errorData.error || 'Błąd rozpoznawania mowy');
       }
       
@@ -129,6 +225,7 @@ export default function TranslatePage() {
   };
 
   const playTranslation = async (text, language) => {
+    let audioUrl = null;
     try {
       const response = await fetch('/api/tts', {
         method: 'POST',
@@ -139,12 +236,18 @@ export default function TranslatePage() {
       if (!response.ok) throw new Error('Błąd syntezy mowy');
       
       const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+      audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      
+      // Cleanup po zakończeniu odtwarzania
+      audio.addEventListener('ended', () => {
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+      });
       
       await audio.play();
     } catch (error) {
       console.error('Error playing audio:', error);
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
     }
   };
 
@@ -216,7 +319,7 @@ export default function TranslatePage() {
       width: '200px',
       height: '200px',
       borderRadius: '50%',
-      background: isRecording ? '#ef4444' : 'white',
+      background: 'white',
       cursor: 'pointer',
       display: 'flex',
       flexDirection: 'column',
@@ -224,8 +327,16 @@ export default function TranslatePage() {
       justifyContent: 'center',
       boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
       transition: 'all 0.2s',
-      transform: isRecording ? 'scale(1.1)' : 'scale(1)',
-      opacity: isProcessing ? 0.5 : 1,
+      transform: 'scale(1)',
+      border: 'none',
+      outline: 'none',
+      WebkitTapHighlightColor: 'transparent',
+      userSelect: 'none',
+    },
+    recordButtonActive: {
+      background: '#ef4444',
+      transform: 'scale(1.1)',
+      animation: 'pulse 1.5s infinite',
     },
     micIcon: {
       fontSize: '4rem',
@@ -283,9 +394,23 @@ export default function TranslatePage() {
   };
 
   return (
-    <div style={styles.container}>
+    <>
+      <style jsx global>{`
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(239, 68, 68, 0.4);
+          }
+          70% {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 20px rgba(239, 68, 68, 0);
+          }
+          100% {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(239, 68, 68, 0);
+          }
+        }
+      `}</style>
+      <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family</h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.1.0</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -313,16 +438,31 @@ export default function TranslatePage() {
         <button
           onMouseDown={startRecording}
           onMouseUp={stopRecording}
-          onTouchStart={startRecording}
-          onTouchEnd={stopRecording}
-          disabled={isProcessing}
-          style={styles.recordButton}
+          onMouseLeave={stopRecording}
+          onTouchStart={(e) => {
+            e.preventDefault(); // Zapobiega symulacji mouse events
+            startRecording();
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            stopRecording();
+          }}
+          onTouchCancel={stopRecording}
+          disabled={isProcessing || hasPermission === false}
+          style={{
+            ...styles.recordButton,
+            ...(isRecording && styles.recordButtonActive),
+            ...(hasPermission === false && { opacity: 0.3, cursor: 'not-allowed' })
+          }}
         >
           <div style={styles.micIcon}>
             {isRecording ? '🔴' : '🎤'}
           </div>
           <div style={styles.buttonText}>
-            {isRecording ? 'Nagrywam...' : isProcessing ? 'Przetwarzam...' : 'Przytrzymaj'}
+            {hasPermission === false ? 'Brak dostępu' : 
+             isRecording ? `Nagrywam... ${recordingTime}s` : 
+             isProcessing ? 'Przetwarzam...' : 
+             'Przytrzymaj'}
           </div>
         </button>
 
@@ -362,5 +502,6 @@ export default function TranslatePage() {
         )}
       </main>
     </div>
+    </>
   );
 }

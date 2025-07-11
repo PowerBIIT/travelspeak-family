@@ -23,8 +23,22 @@ export async function POST(request) {
       );
     }
 
+    // Pobieramy zawartość pliku
+    const audioBuffer = await audioFile.arrayBuffer();
+    
+    // Określamy typ pliku na podstawie nagłówka mime
+    const mimeType = audioFile.type || 'audio/webm';
+    const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    
+    console.log('Whisper API - Audio info:', {
+      size: audioBuffer.byteLength,
+      type: mimeType,
+      extension: extension,
+      language: language
+    });
+    
     // Konwertujemy blob na file dla OpenAI
-    const file = new File([audioFile], 'audio.webm', { type: 'audio/webm' });
+    const file = new File([audioBuffer], `audio.${extension}`, { type: mimeType });
     
     // Przygotowujemy dane dla OpenAI
     const openAIFormData = new FormData();

@@ -39,7 +39,7 @@ Only return the translation, nothing else.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o-mini', // Szybszy i tańszy model dla tłumaczeń
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text }
