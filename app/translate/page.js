@@ -14,6 +14,7 @@ export default function TranslatePage() {
   const [hasPermission, setHasPermission] = useState(null);
   const [showPhrases, setShowPhrases] = useState(false);
   const [offlinePhrases, setOfflinePhrases] = useState(null);
+  const [lastAudioUrl, setLastAudioUrl] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -238,7 +239,11 @@ export default function TranslatePage() {
   };
 
   const playTranslation = async (text, language) => {
-    let audioUrl = null;
+    // Jeśli istnieje poprzednie audio, usuń je
+    if (lastAudioUrl) {
+      URL.revokeObjectURL(lastAudioUrl);
+    }
+    
     try {
       const response = await fetch('/api/tts', {
         method: 'POST',
@@ -249,18 +254,22 @@ export default function TranslatePage() {
       if (!response.ok) throw new Error('Błąd syntezy mowy');
       
       const audioBlob = await response.blob();
-      audioUrl = URL.createObjectURL(audioBlob);
+      const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // Cleanup po zakończeniu odtwarzania
-      audio.addEventListener('ended', () => {
-        if (audioUrl) URL.revokeObjectURL(audioUrl);
-      });
+      // Zapisz URL do ponownego odtworzenia
+      setLastAudioUrl(audioUrl);
       
       await audio.play();
     } catch (error) {
       console.error('Error playing audio:', error);
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    }
+  };
+
+  const replayAudio = () => {
+    if (lastAudioUrl) {
+      const audio = new Audio(lastAudioUrl);
+      audio.play();
     }
   };
 
@@ -515,6 +524,21 @@ export default function TranslatePage() {
       minWidth: '40px',
       minHeight: '40px',
     },
+    replayButton: {
+      background: '#4f46e5',
+      color: 'white',
+      border: 'none',
+      borderRadius: '0.5rem',
+      padding: '0.75rem 1.25rem',
+      marginTop: '1rem',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      justifyContent: 'center',
+    },
   };
 
   return (
@@ -534,7 +558,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.3.0</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.3.1</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -657,6 +681,16 @@ export default function TranslatePage() {
               <div style={styles.translationText}>
                 {lastTranslation.translated}
               </div>
+              {lastAudioUrl && (
+                <button
+                  onClick={replayAudio}
+                  style={styles.replayButton}
+                  onMouseEnter={(e) => e.target.style.background = '#3730a3'}
+                  onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+                >
+                  🔊 Odtwórz ponownie
+                </button>
+              )}
             </div>
           </div>
         )}
