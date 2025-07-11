@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function TranslatePage() {
-  const [activeLang, setActiveLang] = useState('pl');
+  const [sourceLang, setSourceLang] = useState('pl');
+  const [targetLang, setTargetLang] = useState('en');
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastTranslation, setLastTranslation] = useState(null);
@@ -180,12 +181,12 @@ export default function TranslatePage() {
       // 1. Speech to text
       const formData = new FormData();
       formData.append('audio', audioBlob);
-      formData.append('language', activeLang);
+      formData.append('language', sourceLang);
       
       console.log('Sending audio to Whisper:', {
         blobSize: audioBlob.size,
         blobType: audioBlob.type,
-        language: activeLang
+        language: sourceLang
       });
       
       const whisperResponse = await fetch('/api/whisper', {
@@ -202,14 +203,13 @@ export default function TranslatePage() {
       const { text } = await whisperResponse.json();
       
       // 2. Translation
-      const targetLangs = getTargetLanguages(activeLang);
       const translateResponse = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           text, 
-          from: activeLang, 
-          to: targetLangs[0] // Główny język docelowy
+          from: sourceLang, 
+          to: targetLang
         }),
       });
       
@@ -222,12 +222,12 @@ export default function TranslatePage() {
       setLastTranslation({
         original: text,
         translated: translation,
-        from: activeLang,
-        to: targetLangs[0],
+        from: sourceLang,
+        to: targetLang,
       });
       
       // 3. Text to speech
-      await playTranslation(translation, targetLangs[0]);
+      await playTranslation(translation, targetLang);
       
     } catch (error) {
       console.error('Processing error:', error);
@@ -491,6 +491,30 @@ export default function TranslatePage() {
       fontSize: '0.875rem',
       color: '#6b7280',
     },
+    arrow: {
+      color: 'white',
+      fontSize: '1.5rem',
+      fontWeight: 'bold',
+      margin: '0 0.5rem',
+      display: 'flex',
+      alignItems: 'center',
+    },
+    swapButton: {
+      background: 'rgba(255, 255, 255, 0.3)',
+      color: 'white',
+      border: 'none',
+      borderRadius: '0.5rem',
+      padding: '0.5rem',
+      marginLeft: '0.5rem',
+      fontSize: '1.5rem',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: '40px',
+      minHeight: '40px',
+    },
   };
 
   return (
@@ -510,7 +534,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.2.1</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.3.0</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -523,16 +547,47 @@ export default function TranslatePage() {
 
       <main style={styles.main}>
         <div style={styles.languageSelector}>
-          {Object.entries(languages).map(([code, lang]) => (
-            <button
-              key={code}
-              onClick={() => setActiveLang(code)}
-              style={styles.langButton(activeLang === code)}
-            >
-              <span style={styles.flag}>{lang.flag}</span>
-              <span style={styles.langName(activeLang === code)}>{lang.name}</span>
-            </button>
-          ))}
+          <button
+            onClick={() => {
+              const newSource = sourceLang === 'pl' ? 'en' : sourceLang === 'en' ? 'fr' : 'pl';
+              if (newSource === targetLang) {
+                setTargetLang(sourceLang);
+              }
+              setSourceLang(newSource);
+            }}
+            style={styles.langButton(true)}
+          >
+            <span style={styles.flag}>{languages[sourceLang].flag}</span>
+            <span style={styles.langName(true)}>{languages[sourceLang].name}</span>
+          </button>
+          
+          <div style={styles.arrow}>→</div>
+          
+          <button
+            onClick={() => {
+              const newTarget = targetLang === 'en' ? 'fr' : targetLang === 'fr' ? 'pl' : 'en';
+              if (newTarget === sourceLang) {
+                setSourceLang(targetLang);
+              }
+              setTargetLang(newTarget);
+            }}
+            style={styles.langButton(true)}
+          >
+            <span style={styles.flag}>{languages[targetLang].flag}</span>
+            <span style={styles.langName(true)}>{languages[targetLang].name}</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              const temp = sourceLang;
+              setSourceLang(targetLang);
+              setTargetLang(temp);
+            }}
+            style={styles.swapButton}
+            title="Zamień języki"
+          >
+            ⇄
+          </button>
         </div>
 
         <button
@@ -568,6 +623,11 @@ export default function TranslatePage() {
 
         <div style={styles.status}>
           {isProcessing && 'Tłumaczę...'}
+          {!isProcessing && !error && !lastTranslation && (
+            <div>
+              Mów w języku: <strong>{languages[sourceLang].flag} {languages[sourceLang].name}</strong>
+            </div>
+          )}
           {!isProcessing && !error && lastTranslation && 'Gotowe!'}
         </div>
 
@@ -631,8 +691,7 @@ export default function TranslatePage() {
                    category === 'transport' ? '🚌 Transport' : 
                    '💬 Podstawowe'}
                 </h3>
-                {Object.entries(phrases[activeLang] || {}).map(([phrase, translations]) => {
-                  const targetLang = getTargetLanguages(activeLang)[0];
+                {Object.entries(phrases[sourceLang] || {}).map(([phrase, translations]) => {
                   return (
                     <div
                       key={phrase}
@@ -641,7 +700,7 @@ export default function TranslatePage() {
                         setLastTranslation({
                           original: phrase,
                           translated: translations[targetLang],
-                          from: activeLang,
+                          from: sourceLang,
                           to: targetLang,
                         });
                         setShowPhrases(false);
