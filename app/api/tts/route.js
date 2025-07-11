@@ -10,6 +10,8 @@ const voiceMap = {
 };
 
 export async function POST(request) {
+  const startTime = Date.now();
+  
   try {
     const { text, language } = await request.json();
 
@@ -29,6 +31,10 @@ export async function POST(request) {
     }
 
     const voice = voiceMap[language] || 'alloy';
+    
+    // Oblicz przybliżony koszt (TTS: $15 per 1M characters)
+    const characterCount = text.length;
+    const estimatedCost = (characterCount * 15) / 1000000;
 
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
@@ -56,12 +62,25 @@ export async function POST(request) {
 
     // Pobieramy audio jako buffer
     const audioBuffer = await response.arrayBuffer();
+    
+    const latency = Date.now() - startTime;
+    
+    console.log('TTS API - Performance:', {
+      textLength: text.length,
+      language: language,
+      voice: voice,
+      latency: latency + 'ms',
+      cost: '$' + estimatedCost.toFixed(4),
+      audioSize: audioBuffer.byteLength + ' bytes'
+    });
 
     // Zwracamy audio z odpowiednimi nagłówkami
     return new NextResponse(audioBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.byteLength.toString(),
+        'X-Performance-Latency': latency.toString(),
+        'X-Estimated-Cost': estimatedCost.toFixed(4),
       },
     });
 

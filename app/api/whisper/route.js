@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export async function POST(request) {
+  const startTime = Date.now();
+  
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio');
@@ -29,48 +31,87 @@ export async function POST(request) {
     // Określamy typ pliku na podstawie nagłówka mime
     const mimeType = audioFile.type || 'audio/webm';
     const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const audioDurationSeconds = audioBuffer.byteLength / (16000 * 2); // Przybliżone oszacowanie
     
     console.log('Whisper API - Audio info:', {
       size: audioBuffer.byteLength,
       type: mimeType,
       extension: extension,
-      language: language
+      language: language,
+      estimatedDuration: audioDurationSeconds.toFixed(1) + 's'
     });
     
     // Konwertujemy blob na file dla OpenAI
     const file = new File([audioBuffer], `audio.${extension}`, { type: mimeType });
     
-    // Przygotowujemy dane dla OpenAI
-    const openAIFormData = new FormData();
-    openAIFormData.append('file', file);
-    openAIFormData.append('model', 'whisper-1');
-    openAIFormData.append('language', language);
-    openAIFormData.append('response_format', 'json');
-    openAIFormData.append('temperature', '0.2');
-
-    // Wywołujemy Whisper API
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: openAIFormData,
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenAI Whisper error:', error);
-      return NextResponse.json(
-        { error: 'Błąd rozpoznawania mowy' },
-        { status: response.status }
-      );
+    // Funkcja do wywołania transkrypcji z określonym modelem
+    const transcribeWithModel = async (modelName) => {
+      const openAIFormData = new FormData();
+      openAIFormData.append('file', file);
+      openAIFormData.append('model', modelName);
+      openAIFormData.append('language', language);
+      openAIFormData.append('response_format', 'json');
+      openAIFormData.append('temperature', '0'); // Deterministyczne dla spójności
+      
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: openAIFormData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Model ${modelName} failed: ${error}`);
+      }
+      
+      return response.json();
+    };
+    
+    let data;
+    let modelUsed;
+    let estimatedCost;
+    
+    try {
+      // Próbuj użyć nowego, tańszego modelu
+      data = await transcribeWithModel('gpt-4o-mini-transcribe');
+      modelUsed = 'gpt-4o-mini-transcribe';
+      estimatedCost = (audioDurationSeconds / 60) * 0.003; // $0.003 per minute
+    } catch (primaryError) {
+      console.warn('Primary model failed, falling back to whisper-1:', primaryError.message);
+      
+      // Fallback do sprawdzonego modelu
+      try {
+        data = await transcribeWithModel('whisper-1');
+        modelUsed = 'whisper-1 (fallback)';
+        estimatedCost = (audioDurationSeconds / 60) * 0.006; // $0.006 per minute
+      } catch (fallbackError) {
+        console.error('Both models failed:', fallbackError);
+        return NextResponse.json(
+          { error: 'Błąd rozpoznawania mowy' },
+          { status: 500 }
+        );
+      }
     }
-
-    const data = await response.json();
+    
+    const latency = Date.now() - startTime;
+    
+    console.log('Whisper API - Performance:', {
+      model: modelUsed,
+      latency: latency + 'ms',
+      cost: '$' + estimatedCost.toFixed(4),
+      textLength: data.text.length
+    });
     
     return NextResponse.json({
       text: data.text,
       language: language,
+      performance: {
+        model: modelUsed,
+        latencyMs: latency,
+        estimatedCost: estimatedCost
+      }
     });
 
   } catch (error) {
