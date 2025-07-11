@@ -11,6 +11,8 @@ export default function TranslatePage() {
   const [error, setError] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
   const [hasPermission, setHasPermission] = useState(null);
+  const [showPhrases, setShowPhrases] = useState(false);
+  const [offlinePhrases, setOfflinePhrases] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -33,6 +35,7 @@ export default function TranslatePage() {
   // Sprawdzanie uprawnień do mikrofonu przy starcie
   useEffect(() => {
     checkMicrophonePermission();
+    loadOfflinePhrases();
     
     return () => {
       // Cleanup przy odmontowywaniu
@@ -55,6 +58,16 @@ export default function TranslatePage() {
     } catch (error) {
       console.log('Permission API not supported, will check on first use');
       setHasPermission(true); // Assume true, will check on actual use
+    }
+  };
+
+  const loadOfflinePhrases = async () => {
+    try {
+      const response = await fetch('/api/offline-phrases');
+      const data = await response.json();
+      setOfflinePhrases(data);
+    } catch (error) {
+      console.error('Failed to load offline phrases:', error);
     }
   };
 
@@ -267,20 +280,20 @@ export default function TranslatePage() {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: '1rem 2rem',
+      padding: '0.75rem 1rem',
       background: 'rgba(0, 0, 0, 0.1)',
     },
     title: {
       color: 'white',
-      fontSize: '1.5rem',
+      fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
       fontWeight: 'bold',
     },
     logoutButton: {
       background: 'rgba(255, 255, 255, 0.2)',
       color: 'white',
-      padding: '0.5rem 1rem',
+      padding: '0.5rem 0.75rem',
       borderRadius: '0.5rem',
-      fontSize: '0.875rem',
+      fontSize: '0.75rem',
       cursor: 'pointer',
       transition: 'background 0.2s',
     },
@@ -290,34 +303,38 @@ export default function TranslatePage() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '2rem',
+      padding: '1rem',
+      overflowX: 'hidden',
     },
     languageSelector: {
       display: 'flex',
-      gap: '1rem',
-      marginBottom: '3rem',
+      gap: '0.5rem',
+      marginBottom: '2rem',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
     },
     langButton: (isActive) => ({
       background: isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.3)',
       backdropFilter: 'blur(8px)',
-      padding: '1rem 2rem',
+      padding: '0.75rem 1.25rem',
       borderRadius: '1rem',
       cursor: 'pointer',
       transition: 'all 0.2s',
       display: 'flex',
       alignItems: 'center',
       gap: '0.5rem',
+      minHeight: '48px',
     }),
     flag: {
-      fontSize: '2rem',
+      fontSize: 'clamp(1.5rem, 4vw, 2rem)',
     },
     langName: (isActive) => ({
       color: isActive ? '#1f2937' : 'white',
       fontWeight: isActive ? 'bold' : 'normal',
     }),
     recordButton: {
-      width: '200px',
-      height: '200px',
+      width: 'min(50vw, 200px)',
+      height: 'min(50vw, 200px)',
       borderRadius: '50%',
       background: 'white',
       cursor: 'pointer',
@@ -339,25 +356,25 @@ export default function TranslatePage() {
       animation: 'pulse 1.5s infinite',
     },
     micIcon: {
-      fontSize: '4rem',
+      fontSize: 'clamp(3rem, 8vw, 4rem)',
       marginBottom: '0.5rem',
     },
     buttonText: {
       color: isRecording ? 'white' : '#4f46e5',
       fontWeight: 'bold',
-      fontSize: '1.125rem',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)',
     },
     status: {
-      marginTop: '2rem',
+      marginTop: '1.5rem',
       color: 'white',
-      fontSize: '1.125rem',
+      fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
       minHeight: '2rem',
     },
     translation: {
       background: 'rgba(255, 255, 255, 0.95)',
       borderRadius: '1rem',
-      padding: '2rem',
-      marginTop: '2rem',
+      padding: 'clamp(1rem, 3vw, 2rem)',
+      marginTop: '1.5rem',
       maxWidth: '600px',
       width: '100%',
       boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
@@ -374,9 +391,10 @@ export default function TranslatePage() {
       fontSize: '0.875rem',
     },
     translationText: {
-      fontSize: '1.25rem',
+      fontSize: 'clamp(1.1rem, 3vw, 1.25rem)',
       color: '#1f2937',
       lineHeight: 1.6,
+      wordBreak: 'break-word',
     },
     divider: {
       height: '1px',
@@ -390,6 +408,88 @@ export default function TranslatePage() {
       borderRadius: '0.5rem',
       marginTop: '1rem',
       maxWidth: '400px',
+    },
+    phrasesButton: {
+      position: 'fixed',
+      bottom: '1rem',
+      right: '1rem',
+      background: 'rgba(255, 255, 255, 0.9)',
+      padding: '0.75rem 1.25rem',
+      borderRadius: '2rem',
+      boxShadow: '0 10px 20px rgba(0, 0, 0, 0.2)',
+      cursor: 'pointer',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
+      fontWeight: 'bold',
+      color: '#4f46e5',
+      transition: 'all 0.2s',
+      border: 'none',
+      minHeight: '48px',
+    },
+    phrasesModal: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem',
+      zIndex: 1000,
+    },
+    phrasesContent: {
+      background: 'white',
+      borderRadius: '1rem',
+      padding: '1.5rem',
+      maxWidth: '600px',
+      width: 'calc(100% - 2rem)',
+      maxHeight: '80vh',
+      overflow: 'auto',
+    },
+    phrasesHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '1.5rem',
+    },
+    phrasesTitle: {
+      fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
+      fontWeight: 'bold',
+      color: '#1f2937',
+    },
+    closeButton: {
+      background: 'none',
+      fontSize: '2rem',
+      cursor: 'pointer',
+      color: '#6b7280',
+      border: 'none',
+    },
+    categoryTitle: {
+      fontSize: 'clamp(1.1rem, 3vw, 1.25rem)',
+      fontWeight: 'bold',
+      color: '#4f46e5',
+      marginTop: '1.5rem',
+      marginBottom: '0.75rem',
+      textTransform: 'capitalize',
+    },
+    phraseItem: {
+      background: '#f3f4f6',
+      padding: '1rem',
+      borderRadius: '0.5rem',
+      marginBottom: '0.5rem',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      minHeight: '48px',
+    },
+    phraseOriginal: {
+      fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
+      color: '#1f2937',
+      marginBottom: '0.25rem',
+    },
+    phraseTranslation: {
+      fontSize: '0.875rem',
+      color: '#6b7280',
     },
   };
 
@@ -410,7 +510,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.1.1</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.2.0</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -501,6 +601,67 @@ export default function TranslatePage() {
           </div>
         )}
       </main>
+
+      <button
+        onClick={() => setShowPhrases(true)}
+        style={styles.phrasesButton}
+        onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+        onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+      >
+        📚 Frazy offline
+      </button>
+
+      {showPhrases && offlinePhrases && (
+        <div style={styles.phrasesModal} onClick={() => setShowPhrases(false)}>
+          <div style={styles.phrasesContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.phrasesHeader}>
+              <h2 style={styles.phrasesTitle}>Frazy offline</h2>
+              <button
+                onClick={() => setShowPhrases(false)}
+                style={styles.closeButton}
+              >
+                ×
+              </button>
+            </div>
+            
+            {Object.entries(offlinePhrases).map(([category, phrases]) => (
+              <div key={category}>
+                <h3 style={styles.categoryTitle}>
+                  {category === 'emergency' ? '🚨 Awaryjne' : 
+                   category === 'transport' ? '🚌 Transport' : 
+                   '💬 Podstawowe'}
+                </h3>
+                {Object.entries(phrases[activeLang] || {}).map(([phrase, translations]) => {
+                  const targetLang = getTargetLanguages(activeLang)[0];
+                  return (
+                    <div
+                      key={phrase}
+                      style={styles.phraseItem}
+                      onClick={async () => {
+                        setLastTranslation({
+                          original: phrase,
+                          translated: translations[targetLang],
+                          from: activeLang,
+                          to: targetLang,
+                        });
+                        setShowPhrases(false);
+                        await playTranslation(translations[targetLang], targetLang);
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#e5e7eb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                    >
+                      <div style={styles.phraseOriginal}>{phrase}</div>
+                      <div style={styles.phraseTranslation}>
+                        {languages[targetLang].flag} {translations[targetLang]}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
     </>
   );

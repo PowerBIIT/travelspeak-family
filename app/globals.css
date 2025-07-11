@@ -29,3 +29,23 @@ button {
 input {
   outline: none;
 }
+
+/* Mobile-first responsive adjustments */
+@media (max-width: 400px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* Ensure buttons don't have default styles on iOS */
+button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Prevent layout issues on very small screens */
+@media (max-width: 360px) {
+  html {
+    font-size: 13px;
+  }
+}

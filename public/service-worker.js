@@ -1,14 +1,13 @@
-const CACHE_NAME = 'travelspeak-v1';
-const OFFLINE_PHRASES_URL = '/phrases';
+const CACHE_NAME = 'travelspeak-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
   '/',
-  '/phrases',
-  '/translate/text',
-  '/translate/voice',
-  '/history',
+  '/translate',
+  '/api/offline-phrases',
   '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 // Install event - cache static assets
