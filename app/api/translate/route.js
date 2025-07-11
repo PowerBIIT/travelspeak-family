@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { checkCostLimit, addCost, getCostHeaders } from '../lib/costTracker.js';
-import { checkRateLimit, getRateLimitHeaders } from '../lib/rateLimiter.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -91,19 +89,6 @@ export async function POST(request) {
   const startTime = Date.now();
   
   try {
-    // Check rate limit first
-    const ip = request.headers.get('x-forwarded-for') || 'global';
-    const rateLimitResult = checkRateLimit('translate', ip);
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { error: rateLimitResult.message },
-        { 
-          status: 429,
-          headers: getRateLimitHeaders(rateLimitResult)
-        }
-      );
-    }
     
     const { text, from, to } = await request.json();
 
@@ -122,26 +107,6 @@ export async function POST(request) {
       );
     }
     
-    // Estimate cost and check limit (approx 500 tokens per request)
-    const estimatedCost = 0.004; // Average cost per translation
-    const costCheck = checkCostLimit(estimatedCost, 'translate');
-    
-    if (!costCheck.allowed) {
-      return NextResponse.json(
-        { 
-          error: costCheck.message,
-          costInfo: {
-            daily: costCheck.currentCost,
-            limit: costCheck.limit,
-            reason: costCheck.reason
-          }
-        },
-        { 
-          status: 429,
-          headers: getCostHeaders()
-        }
-      );
-    }
 
     // Sprawdź cache najpierw
     const normalizedText = normalizeText(text);
@@ -159,11 +124,6 @@ export async function POST(request) {
         cached: true
       });
       
-      const responseHeaders = {
-        ...getRateLimitHeaders(rateLimitResult),
-        ...getCostHeaders()
-      };
-      
       return NextResponse.json({
         translation: cachedTranslation,
         from,
@@ -173,7 +133,7 @@ export async function POST(request) {
           latencyMs: latency,
           estimatedCost: 0
         }
-      }, { headers: responseHeaders });
+      });
     }
 
     // Zoptymalizowany prompt dla naturalnych tłumaczeń
@@ -212,19 +172,6 @@ Output only the translation, nothing else.`;
     const data = await response.json();
     const translation = data.choices[0].message.content.trim();
     
-    // Oblicz koszt (przybliżony)
-    const inputTokens = Math.ceil(text.length / 4); // Przybliżenie
-    const outputTokens = Math.ceil(translation.length / 4);
-    const actualCost = (inputTokens * 0.00015 + outputTokens * 0.0006) / 1000;
-    
-    // Add cost to tracker
-    addCost(actualCost, 'translate', {
-      inputTokens,
-      outputTokens,
-      from,
-      to,
-      textLength: text.length
-    });
     
     const latency = Date.now() - startTime;
     
@@ -233,16 +180,8 @@ Output only the translation, nothing else.`;
       from: from,
       to: to,
       latency: latency + 'ms',
-      cost: '$' + actualCost.toFixed(4),
-      cached: false,
-      inputTokens: inputTokens,
-      outputTokens: outputTokens
+      cached: false
     });
-
-    const responseHeaders = {
-      ...getRateLimitHeaders(rateLimitResult),
-      ...getCostHeaders()
-    };
 
     return NextResponse.json({
       translation,
@@ -250,10 +189,9 @@ Output only the translation, nothing else.`;
       to,
       cached: false,
       performance: {
-        latencyMs: latency,
-        estimatedCost: actualCost
+        latencyMs: latency
       }
-    }, { headers: responseHeaders });
+    });
 
   } catch (error) {
     console.error('Translation API error:', error);
