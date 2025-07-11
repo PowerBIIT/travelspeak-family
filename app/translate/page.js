@@ -22,13 +22,11 @@ export default function TranslatePage() {
   const [detectedLanguage, setDetectedLanguage] = useState(null);
   
   // Nowe stany dla OCR
-  const [showOCR, setShowOCR] = useState(false);
   const [ocrEnabled, setOcrEnabled] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(false);
   const [ocrResult, setOcrResult] = useState(null);
   const [showOcrResult, setShowOcrResult] = useState(false);
-  const [ocrAutoRead, setOcrAutoRead] = useState(true);
   
   const mediaRecorderRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -100,7 +98,7 @@ export default function TranslatePage() {
     }
   };
 
-  const handleImageSelect = (event) => {
+  const handleImageSelect = async (event) => {
     const file = event.target.files[0];
     if (file) {
       // Sprawdź rozmiar pliku (max 4MB)
@@ -116,20 +114,19 @@ export default function TranslatePage() {
       }
       
       setSelectedImage(file);
-      setShowOCR(true);
       setError('');
       
-      // Pokaż podgląd
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        // Możemy dodać podgląd obrazu później
-      };
-      reader.readAsDataURL(file);
+      // Od razu przetwarzaj obraz
+      await processOCR(file);
     }
+    
+    // Wyczyść input, aby można było wybrać ten sam plik ponownie
+    event.target.value = '';
   };
 
-  const processOCR = async () => {
-    if (!selectedImage) return;
+  const processOCR = async (imageFile) => {
+    const file = imageFile || selectedImage;
+    if (!file) return;
     
     setOcrProcessing(true);
     setError('');
@@ -137,7 +134,7 @@ export default function TranslatePage() {
     
     try {
       const formData = new FormData();
-      formData.append('image', selectedImage);
+      formData.append('image', file);
       formData.append('targetLang', conversationMode ? conversationLangs[0] : targetLang);
       
       const response = await fetch('/api/ocr', {
@@ -157,18 +154,13 @@ export default function TranslatePage() {
       } else {
         setOcrResult(data);
         setShowOcrResult(true);
-        
-        // Odtwórz audio jeśli użytkownik wybrał opcję czytania
-        if (ocrAutoRead && data.translated_text) {
-          await playTranslation(data.translated_text, data.targetLang);
-        }
+        // Nie odtwarzaj automatycznie - użytkownik kliknie przycisk jeśli chce usłyszeć
       }
     } catch (error) {
       console.error('OCR processing error:', error);
       setError(error.message || 'Wystąpił błąd podczas przetwarzania obrazu');
     } finally {
       setOcrProcessing(false);
-      setShowOCR(false);
       setSelectedImage(null);
     }
   };
@@ -1120,9 +1112,9 @@ export default function TranslatePage() {
                 }}
                 title="Zrób zdjęcie lub wybierz z galerii"
               >
-                <div style={styles.cameraIcon}>📷</div>
+                <div style={styles.cameraIcon}>{ocrProcessing ? '⏳' : '📷'}</div>
                 <div style={styles.cameraText}>
-                  {ocrProcessing ? 'Czytam...' : 'Zdjęcie'}
+                  {ocrProcessing ? 'Przetwarzam...' : 'Zdjęcie'}
                 </div>
               </button>
             </>
@@ -1263,93 +1255,6 @@ export default function TranslatePage() {
         </div>
       )}
 
-      {/* Modal OCR */}
-      {showOCR && selectedImage && (
-        <div style={styles.ocrModal} onClick={() => setShowOCR(false)}>
-          <div style={styles.ocrContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.ocrHeader}>
-              <h2 style={styles.ocrTitle}>Rozpoznawanie tekstu</h2>
-              <button
-                onClick={() => {
-                  setShowOCR(false);
-                  setSelectedImage(null);
-                }}
-                style={styles.closeButton}
-              >
-                ×
-              </button>
-            </div>
-            
-            {/* Podgląd obrazu */}
-            {selectedImage && (
-              <img
-                src={URL.createObjectURL(selectedImage)}
-                alt="Wybrany obraz"
-                style={styles.imagePreview}
-              />
-            )}
-            
-            {/* Opcje przetwarzania */}
-            <div style={styles.ocrOptions}>
-              <button
-                onClick={() => setOcrAutoRead(false)}
-                style={{
-                  ...styles.ocrOptionButton,
-                  ...(ocrAutoRead === false && {
-                    borderColor: '#4f46e5',
-                    background: '#ede9fe',
-                    color: '#4f46e5'
-                  })
-                }}
-              >
-                📄 Tylko tłumacz
-              </button>
-              <button
-                onClick={() => setOcrAutoRead(true)}
-                style={{
-                  ...styles.ocrOptionButton,
-                  ...(ocrAutoRead === true && {
-                    borderColor: '#4f46e5',
-                    background: '#ede9fe',
-                    color: '#4f46e5'
-                  })
-                }}
-              >
-                📄🔊 Tłumacz i czytaj
-              </button>
-            </div>
-            
-            {/* Przyciski akcji */}
-            <div style={styles.ocrButtons}>
-              <button
-                onClick={() => {
-                  setShowOCR(false);
-                  setSelectedImage(null);
-                }}
-                style={{
-                  ...styles.ocrButton,
-                  background: '#e5e7eb',
-                  color: '#6b7280'
-                }}
-              >
-                Anuluj
-              </button>
-              <button
-                onClick={processOCR}
-                disabled={ocrProcessing}
-                style={{
-                  ...styles.ocrButton,
-                  background: ocrProcessing ? '#e5e7eb' : '#4f46e5',
-                  color: 'white',
-                  cursor: ocrProcessing ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {ocrProcessing ? 'Przetwarzam...' : 'Czytaj i tłumacz'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Pełnoekranowe wyświetlanie wyników OCR */}
       {showOcrResult && ocrResult && (
