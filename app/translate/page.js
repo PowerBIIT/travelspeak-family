@@ -359,11 +359,11 @@ export default function TranslatePage() {
       fontSize: 'clamp(3rem, 8vw, 4rem)',
       marginBottom: '0.5rem',
     },
-    buttonText: {
+    buttonText: (isRecording) => ({
       color: isRecording ? 'white' : '#4f46e5',
       fontWeight: 'bold',
       fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)',
-    },
+    }),
     status: {
       marginTop: '1.5rem',
       color: 'white',
@@ -510,7 +510,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.2.0</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.2.1</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -558,7 +558,7 @@ export default function TranslatePage() {
           <div style={styles.micIcon}>
             {isRecording ? '🔴' : '🎤'}
           </div>
-          <div style={styles.buttonText}>
+          <div style={styles.buttonText(isRecording)}>
             {hasPermission === false ? 'Brak dostępu' : 
              isRecording ? `Nagrywam... ${recordingTime}s` : 
              isProcessing ? 'Przetwarzam...' : 
