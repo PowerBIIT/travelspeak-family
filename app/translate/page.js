@@ -1122,7 +1122,7 @@ export default function TranslatePage() {
       )}
       
       <header style={{...styles.header, marginTop: statusInfo ? '40px' : '0'}}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.7.0</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.8.0</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
