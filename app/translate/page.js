@@ -235,10 +235,10 @@ export default function TranslatePage() {
       setIsRecording(true);
       isRecordingRef.current = true;
       
-      // Timer 30 sekund
+      // Timer 15 sekund (reduced from 30s for cost control)
       timeoutRef.current = setTimeout(() => {
         stopRecording();
-      }, 30000);
+      }, 15000);
       
       // Licznik czasu
       intervalRef.current = setInterval(() => {

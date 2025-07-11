@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { checkCostLimit, addCost, getCostHeaders } from '../lib/costTracker.js';
+import { checkRateLimit, getRateLimitHeaders } from '../lib/rateLimiter.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -13,6 +15,20 @@ export async function POST(request) {
   const startTime = Date.now();
   
   try {
+    // Check rate limit first
+    const ip = request.headers.get('x-forwarded-for') || 'global';
+    const rateLimitResult = checkRateLimit('tts', ip);
+    
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: rateLimitResult.message },
+        { 
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      );
+    }
+    
     const { text, language } = await request.json();
 
     if (!text || !language) {
@@ -35,6 +51,26 @@ export async function POST(request) {
     // Oblicz przybliżony koszt (TTS: $15 per 1M characters)
     const characterCount = text.length;
     const estimatedCost = (characterCount * 15) / 1000000;
+    
+    // Check cost limit
+    const costCheck = checkCostLimit(estimatedCost, 'tts');
+    
+    if (!costCheck.allowed) {
+      return NextResponse.json(
+        { 
+          error: costCheck.message,
+          costInfo: {
+            daily: costCheck.currentCost,
+            limit: costCheck.limit,
+            reason: costCheck.reason
+          }
+        },
+        { 
+          status: 429,
+          headers: getCostHeaders()
+        }
+      );
+    }
 
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
@@ -63,6 +99,14 @@ export async function POST(request) {
     // Pobieramy audio jako buffer
     const audioBuffer = await response.arrayBuffer();
     
+    // Add actual cost to tracker
+    addCost(estimatedCost, 'tts', {
+      characterCount,
+      language,
+      voice,
+      audioSize: audioBuffer.byteLength
+    });
+    
     const latency = Date.now() - startTime;
     
     console.log('TTS API - Performance:', {
@@ -81,6 +125,8 @@ export async function POST(request) {
         'Content-Length': audioBuffer.byteLength.toString(),
         'X-Performance-Latency': latency.toString(),
         'X-Estimated-Cost': estimatedCost.toFixed(4),
+        ...getRateLimitHeaders(rateLimitResult),
+        ...getCostHeaders()
       },
     });
 

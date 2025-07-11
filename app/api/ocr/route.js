@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { checkCostLimit, addCost, getCostHeaders } from '../lib/costTracker.js';
+import { checkRateLimit, getRateLimitHeaders } from '../lib/rateLimiter.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ENABLE_OCR_FEATURE = process.env.ENABLE_OCR_FEATURE === 'true';
@@ -15,6 +17,20 @@ export async function POST(request) {
       return NextResponse.json(
         { error: 'Funkcja OCR jest tymczasowo wyłączona' },
         { status: 503 }
+      );
+    }
+    
+    // Check rate limit first
+    const ip = request.headers.get('x-forwarded-for') || 'global';
+    const rateLimitResult = checkRateLimit('ocr', ip);
+    
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: rateLimitResult.message },
+        { 
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
       );
     }
 
@@ -34,6 +50,27 @@ export async function POST(request) {
       return NextResponse.json(
         { error: 'Błąd konfiguracji serwera' },
         { status: 500 }
+      );
+    }
+    
+    // Check cost limit - OCR costs $0.01 per image
+    const estimatedCost = 0.01;
+    const costCheck = checkCostLimit(estimatedCost, 'ocr');
+    
+    if (!costCheck.allowed) {
+      return NextResponse.json(
+        { 
+          error: costCheck.message,
+          costInfo: {
+            daily: costCheck.currentCost,
+            limit: costCheck.limit,
+            reason: costCheck.reason
+          }
+        },
+        { 
+          status: 429,
+          headers: getCostHeaders()
+        }
       );
     }
 
@@ -124,17 +161,30 @@ export async function POST(request) {
     
     // Oblicz koszt (przybliżony)
     // GPT-4o-mini vision: ~$0.01 per image (high detail)
-    const estimatedCost = 0.01;
+    const actualCost = 0.01;
+    
+    // Add cost to tracker
+    addCost(actualCost, 'vision', {
+      imageSize: imageBuffer.byteLength,
+      targetLang,
+      detectedLanguage: result.detected_language,
+      textLength: result.original_text?.length || 0
+    });
     
     const latency = Date.now() - startTime;
     
     console.log('OCR API - Performance:', {
       latency: latency + 'ms',
-      cost: '$' + estimatedCost.toFixed(4),
+      cost: '$' + actualCost.toFixed(4),
       detectedLanguage: result.detected_language,
       confidence: result.confidence,
       textLength: result.original_text?.length || 0
     });
+    
+    const responseHeaders = {
+      ...getRateLimitHeaders(rateLimitResult),
+      ...getCostHeaders()
+    };
 
     // Jeśli nie wykryto tekstu
     if (!result.original_text || result.original_text.trim() === '') {
@@ -142,9 +192,9 @@ export async function POST(request) {
         error: 'Nie znaleziono tekstu na obrazie',
         performance: {
           latencyMs: latency,
-          estimatedCost: estimatedCost
+          estimatedCost: actualCost
         }
-      });
+      }, { headers: responseHeaders });
     }
 
     return NextResponse.json({
@@ -152,9 +202,9 @@ export async function POST(request) {
       targetLang: targetLang,
       performance: {
         latencyMs: latency,
-        estimatedCost: estimatedCost
+        estimatedCost: actualCost
       }
-    });
+    }, { headers: responseHeaders });
 
   } catch (error) {
     console.error('OCR API error:', error);

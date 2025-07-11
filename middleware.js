@@ -3,8 +3,74 @@ import { NextResponse } from 'next/server';
 const AUTH_COOKIE_NAME = 'travelspeak_auth';
 const FAMILY_PASSWORD = process.env.FAMILY_PASSWORD || 'travel2024';
 
+// Rate limiting configuration
+const rateLimitMap = new Map();
+const RATE_LIMITS = {
+  '/api/translate': { requests: 50, window: 3600000 }, // 50 requests per hour
+  '/api/whisper': { requests: 30, window: 3600000 },   // 30 requests per hour
+  '/api/tts': { requests: 50, window: 3600000 },       // 50 requests per hour
+  '/api/ocr': { requests: 20, window: 3600000 },       // 20 requests per hour
+  '/api/auth': { requests: 5, window: 3600000 }        // 5 login attempts per hour
+};
+
+// Cleanup old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitMap.entries()) {
+    if (now > value.resetTime) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, 300000); // Clean every 5 minutes
+
 export function middleware(request) {
   const path = request.nextUrl.pathname;
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+
+  // Rate limiting check for API endpoints
+  if (RATE_LIMITS[path]) {
+    const limit = RATE_LIMITS[path];
+    const key = `${ip}:${path}`;
+    const now = Date.now();
+    
+    const userLimit = rateLimitMap.get(key) || { count: 0, resetTime: now + limit.window };
+    
+    // Reset if window expired
+    if (now > userLimit.resetTime) {
+      userLimit.count = 0;
+      userLimit.resetTime = now + limit.window;
+    }
+    
+    // Check if limit exceeded
+    if (userLimit.count >= limit.requests) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Za dużo żądań. Spróbuj ponownie później.',
+          retryAfter: Math.ceil((userLimit.resetTime - now) / 1000)
+        }), 
+        { 
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-RateLimit-Limit': String(limit.requests),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(userLimit.resetTime),
+            'Retry-After': String(Math.ceil((userLimit.resetTime - now) / 1000))
+          }
+        }
+      );
+    }
+    
+    // Increment counter
+    userLimit.count++;
+    rateLimitMap.set(key, userLimit);
+    
+    // Add rate limit headers to response
+    const response = NextResponse.next();
+    response.headers.set('X-RateLimit-Limit', String(limit.requests));
+    response.headers.set('X-RateLimit-Remaining', String(limit.requests - userLimit.count));
+    response.headers.set('X-RateLimit-Reset', String(userLimit.resetTime));
+  }
 
   // Ścieżki które nie wymagają autentykacji
   const publicPaths = ['/', '/api/auth'];
@@ -17,8 +83,13 @@ export function middleware(request) {
   if (authCookie) {
     try {
       const decoded = Buffer.from(authCookie.value, 'base64').toString();
-      const [password] = decoded.split(':');
-      isAuthenticated = password === FAMILY_PASSWORD;
+      const [sessionId, timestamp, password] = decoded.split(':');
+      
+      // Check if token is valid and not expired
+      const tokenAge = Date.now() - parseInt(timestamp);
+      const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+      
+      isAuthenticated = password === FAMILY_PASSWORD && tokenAge < maxAge;
     } catch (e) {
       isAuthenticated = false;
     }
