@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-
-
+import { checkCostLimit, addCost, getCostHeaders } from '../lib/costTracker.js';
+import { checkRateLimit, getRateLimitHeaders } from '../lib/rateLimiter.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
