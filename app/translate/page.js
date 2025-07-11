@@ -558,7 +558,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.3.1</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.3.2</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
