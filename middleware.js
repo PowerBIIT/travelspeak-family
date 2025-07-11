@@ -43,8 +43,11 @@ export function middleware(request) {
   const path = request.nextUrl.pathname;
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
 
+  // Check if rate limiting is enabled
+  const rateLimitingEnabled = process.env.ENABLE_RATE_LIMITING !== 'false';
+
   // Rate limiting check for API endpoints
-  if (RATE_LIMITS[path]) {
+  if (rateLimitingEnabled && RATE_LIMITS[path]) {
     const limit = RATE_LIMITS[path];
     const key = `${ip}:${path}`;
     const now = Date.now();
