@@ -16,11 +16,10 @@ export default function TranslatePage() {
   const [offlinePhrases, setOfflinePhrases] = useState(null);
   const [lastAudioUrl, setLastAudioUrl] = useState(null);
   
-  // Nowe stany dla trybu konwersacji - domyślnie ukryty
+  // Nowe stany dla trybu konwersacji
   const [conversationMode, setConversationMode] = useState(false);
   const [conversationLangs, setConversationLangs] = useState(['pl', 'fr']);
   const [detectedLanguage, setDetectedLanguage] = useState(null);
-  const [showAdvancedMode, setShowAdvancedMode] = useState(false);
   
   // Nowe stany dla OCR
   const [ocrEnabled, setOcrEnabled] = useState(false);
@@ -74,29 +73,6 @@ export default function TranslatePage() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
-  
-  // Helper function for haptic feedback
-  const triggerHaptic = (type = 'light') => {
-    if ('vibrate' in navigator) {
-      switch (type) {
-        case 'light':
-          navigator.vibrate(10);
-          break;
-        case 'medium':
-          navigator.vibrate(20);
-          break;
-        case 'heavy':
-          navigator.vibrate(30);
-          break;
-        case 'error':
-          navigator.vibrate([50, 50, 50]);
-          break;
-        case 'success':
-          navigator.vibrate([10, 50, 10]);
-          break;
-      }
-    }
-  };
 
   const checkMicrophonePermission = async () => {
     try {
@@ -217,9 +193,6 @@ export default function TranslatePage() {
     // Zabezpieczenie przed wielokrotnym startem
     if (isRecordingRef.current) return;
     
-    // Haptic feedback on start
-    triggerHaptic('medium');
-    
     try {
       setError('');
       setRecordingTime(0);
@@ -284,9 +257,6 @@ export default function TranslatePage() {
       setIsRecording(true);
       isRecordingRef.current = true;
       
-      // Success haptic
-      triggerHaptic('success');
-      
       // Timer 15 sekund (reduced from 30s for cost control)
       timeoutRef.current = setTimeout(() => {
         stopRecording();
@@ -314,9 +284,6 @@ export default function TranslatePage() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      // Haptic feedback on stop
-      triggerHaptic('light');
-      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       isRecordingRef.current = false;
@@ -508,7 +475,6 @@ export default function TranslatePage() {
   };
 
   const handleLogout = async () => {
-    triggerHaptic('medium');
     await fetch('/api/auth', { method: 'DELETE' });
     router.push('/');
   };
@@ -529,19 +495,17 @@ export default function TranslatePage() {
     },
     title: {
       color: 'white',
-      fontSize: 'clamp(1.5rem, 5vw, 2rem)',
+      fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
       fontWeight: 'bold',
     },
     logoutButton: {
       background: 'rgba(255, 255, 255, 0.2)',
       color: 'white',
-      padding: '0.75rem 1.25rem',
-      borderRadius: '0.75rem',
-      fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
+      padding: '0.5rem 0.75rem',
+      borderRadius: '0.5rem',
+      fontSize: '0.75rem',
       cursor: 'pointer',
       transition: 'background 0.2s',
-      border: '2px solid transparent',
-      minHeight: '48px',
     },
     main: {
       flex: 1,
@@ -568,14 +532,13 @@ export default function TranslatePage() {
     modeButton: {
       background: 'rgba(255, 255, 255, 0.2)',
       color: 'white',
-      padding: '1rem 1.5rem',
-      borderRadius: '1rem',
+      padding: '0.5rem 1rem',
+      borderRadius: '0.5rem',
       cursor: 'pointer',
       transition: 'all 0.2s',
-      fontSize: 'clamp(1.125rem, 3vw, 1.375rem)',
-      border: '3px solid transparent',
+      fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
+      border: 'none',
       backdropFilter: 'blur(8px)',
-      minHeight: '64px',
     },
     modeButtonActive: {
       background: 'rgba(255, 255, 255, 0.9)',
@@ -614,71 +577,59 @@ export default function TranslatePage() {
     langButton: (isActive) => ({
       background: isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.3)',
       backdropFilter: 'blur(8px)',
-      padding: '1rem 1.5rem',
+      padding: '0.75rem 1.25rem',
       borderRadius: '1rem',
       cursor: 'pointer',
       transition: 'all 0.2s',
       display: 'flex',
       alignItems: 'center',
-      gap: '0.75rem',
-      minHeight: '80px',
-      minWidth: '120px',
-      border: isActive ? '3px solid white' : '3px solid transparent',
-      boxShadow: isActive ? '0 4px 16px rgba(0, 0, 0, 0.2)' : 'none',
+      gap: '0.5rem',
+      minHeight: '48px',
     }),
     flag: {
-      fontSize: 'clamp(2.5rem, 6vw, 3.5rem)',
+      fontSize: 'clamp(1.5rem, 4vw, 2rem)',
     },
     langName: (isActive) => ({
       color: isActive ? '#1f2937' : 'white',
       fontWeight: isActive ? 'bold' : 'normal',
-      fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
     }),
     recordButton: {
-      width: 'min(70vw, 280px)',
-      height: 'min(70vw, 280px)',
+      width: 'min(50vw, 200px)',
+      height: 'min(50vw, 200px)',
       borderRadius: '50%',
-      background: '#0066FF',
+      background: 'white',
       cursor: 'pointer',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: '0 8px 32px rgba(0, 102, 255, 0.4)',
+      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
       transition: 'all 0.2s',
       transform: 'scale(1)',
-      border: '4px solid white',
+      border: 'none',
       outline: 'none',
       WebkitTapHighlightColor: 'transparent',
       userSelect: 'none',
-      animation: 'gentlePulse 3s ease-in-out infinite',
     },
     recordButtonActive: {
       background: '#ef4444',
-      transform: 'scale(1.05)',
-      animation: 'recordingPulse 1s infinite',
-      boxShadow: '0 0 0 0 rgba(239, 68, 68, 0.7), 0 8px 32px rgba(239, 68, 68, 0.4)',
-      border: '4px solid white',
+      transform: 'scale(1.1)',
+      animation: 'pulse 1.5s infinite',
     },
     micIcon: {
-      fontSize: 'clamp(4rem, 10vw, 6rem)',
+      fontSize: 'clamp(3rem, 8vw, 4rem)',
       marginBottom: '0.5rem',
-      color: 'white',
     },
     buttonText: (isRecording) => ({
-      color: 'white',
+      color: isRecording ? 'white' : '#4f46e5',
       fontWeight: 'bold',
-      fontSize: 'clamp(1.25rem, 3.5vw, 1.75rem)',
-      textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)',
     }),
     status: {
-      marginTop: '2rem',
+      marginTop: '1.5rem',
       color: 'white',
-      fontSize: 'clamp(1.5rem, 4vw, 1.875rem)',
-      minHeight: '3rem',
-      fontWeight: '500',
-      textAlign: 'center',
-      textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+      fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
+      minHeight: '2rem',
     },
     translation: {
       background: 'rgba(255, 255, 255, 0.95)',
@@ -695,18 +646,16 @@ export default function TranslatePage() {
     translationLabel: {
       display: 'flex',
       alignItems: 'center',
-      gap: '0.75rem',
-      marginBottom: '0.75rem',
+      gap: '0.5rem',
+      marginBottom: '0.5rem',
       color: '#6b7280',
-      fontSize: 'clamp(1.125rem, 3vw, 1.375rem)',
-      fontWeight: '500',
+      fontSize: '0.875rem',
     },
     translationText: {
-      fontSize: 'clamp(2rem, 5vw, 2.5rem)',
+      fontSize: 'clamp(1.1rem, 3vw, 1.25rem)',
       color: '#1f2937',
-      lineHeight: 1.5,
+      lineHeight: 1.6,
       wordBreak: 'break-word',
-      fontWeight: '600',
     },
     divider: {
       height: '1px',
@@ -714,33 +663,28 @@ export default function TranslatePage() {
       margin: '1.5rem 0',
     },
     error: {
-      background: '#ef4444',
+      background: 'rgba(239, 68, 68, 0.9)',
       color: 'white',
-      padding: '1.5rem 2rem',
-      borderRadius: '1rem',
-      marginTop: '1.5rem',
-      maxWidth: '500px',
-      fontSize: 'clamp(1.25rem, 3.5vw, 1.5rem)',
-      fontWeight: '600',
-      boxShadow: '0 4px 16px rgba(239, 68, 68, 0.3)',
-      textAlign: 'center',
+      padding: '1rem',
+      borderRadius: '0.5rem',
+      marginTop: '1rem',
+      maxWidth: '400px',
     },
     phrasesButton: {
       position: 'fixed',
-      bottom: '1.5rem',
-      right: '1.5rem',
-      background: 'rgba(255, 255, 255, 0.95)',
-      padding: '1.25rem 2rem',
+      bottom: '1rem',
+      right: '1rem',
+      background: 'rgba(255, 255, 255, 0.9)',
+      padding: '0.75rem 1.25rem',
       borderRadius: '2rem',
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+      boxShadow: '0 10px 20px rgba(0, 0, 0, 0.2)',
       cursor: 'pointer',
-      fontSize: 'clamp(1.25rem, 3.5vw, 1.5rem)',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
       fontWeight: 'bold',
       color: '#4f46e5',
       transition: 'all 0.2s',
-      border: '3px solid white',
-      minHeight: '64px',
-      zIndex: 10,
+      border: 'none',
+      minHeight: '48px',
     },
     phrasesModal: {
       position: 'fixed',
@@ -776,19 +720,11 @@ export default function TranslatePage() {
       color: '#1f2937',
     },
     closeButton: {
-      background: '#ef4444',
-      color: 'white',
-      fontSize: '1.5rem',
+      background: 'none',
+      fontSize: '2rem',
       cursor: 'pointer',
+      color: '#6b7280',
       border: 'none',
-      borderRadius: '50%',
-      width: '64px',
-      height: '64px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 'bold',
-      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
     },
     categoryTitle: {
       fontSize: 'clamp(1.1rem, 3vw, 1.25rem)',
@@ -800,25 +736,20 @@ export default function TranslatePage() {
     },
     phraseItem: {
       background: '#f3f4f6',
-      padding: '1.5rem',
-      borderRadius: '1rem',
-      marginBottom: '1rem',
+      padding: '1rem',
+      borderRadius: '0.5rem',
+      marginBottom: '0.5rem',
       cursor: 'pointer',
       transition: 'all 0.2s',
-      minHeight: '80px',
-      border: '3px solid transparent',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
+      minHeight: '48px',
     },
     phraseOriginal: {
-      fontSize: 'clamp(1.5rem, 4vw, 1.75rem)',
+      fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
       color: '#1f2937',
-      marginBottom: '0.5rem',
-      fontWeight: '600',
+      marginBottom: '0.25rem',
     },
     phraseTranslation: {
-      fontSize: 'clamp(1.25rem, 3.5vw, 1.5rem)',
+      fontSize: '0.875rem',
       color: '#6b7280',
     },
     arrow: {
@@ -832,53 +763,46 @@ export default function TranslatePage() {
     swapButton: {
       background: 'rgba(255, 255, 255, 0.3)',
       color: 'white',
-      border: '3px solid transparent',
-      borderRadius: '1rem',
-      padding: '1rem',
-      marginLeft: '0.75rem',
-      fontSize: '2rem',
+      border: 'none',
+      borderRadius: '0.5rem',
+      padding: '0.5rem',
+      marginLeft: '0.5rem',
+      fontSize: '1.5rem',
       cursor: 'pointer',
       transition: 'all 0.2s',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      minWidth: '64px',
-      minHeight: '64px',
-      backdropFilter: 'blur(8px)',
+      minWidth: '40px',
+      minHeight: '40px',
     },
     replayButton: {
       background: '#4f46e5',
       color: 'white',
       border: 'none',
-      borderRadius: '1rem',
-      padding: '1.25rem 2rem',
-      fontSize: 'clamp(1.25rem, 3.5vw, 1.5rem)',
+      borderRadius: '0.5rem',
+      padding: '0.75rem 1.25rem',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
       cursor: 'pointer',
       transition: 'all 0.2s',
       display: 'flex',
       alignItems: 'center',
-      gap: '0.75rem',
+      gap: '0.5rem',
       justifyContent: 'center',
-      minHeight: '64px',
-      fontWeight: '600',
-      boxShadow: '0 4px 16px rgba(79, 70, 229, 0.3)',
     },
     resetButton: {
       background: '#ef4444',
       color: 'white',
       border: 'none',
-      borderRadius: '1rem',
-      padding: '1.25rem 2rem',
-      fontSize: 'clamp(1.25rem, 3.5vw, 1.5rem)',
+      borderRadius: '0.5rem',
+      padding: '0.75rem 1.25rem',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
       cursor: 'pointer',
       transition: 'all 0.2s',
       display: 'flex',
       alignItems: 'center',
-      gap: '0.75rem',
+      gap: '0.5rem',
       justifyContent: 'center',
-      minHeight: '64px',
-      fontWeight: '600',
-      boxShadow: '0 4px 16px rgba(239, 68, 68, 0.3)',
     },
     translationButtons: {
       display: 'flex',
@@ -896,17 +820,16 @@ export default function TranslatePage() {
     cameraButton: {
       background: 'rgba(255, 255, 255, 0.95)',
       borderRadius: '1rem',
-      padding: '1.5rem 2rem',
+      padding: '1rem 1.5rem',
       cursor: 'pointer',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '0.75rem',
-      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+      gap: '0.5rem',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
       transition: 'all 0.2s',
-      border: '3px solid white',
-      minWidth: '140px',
-      minHeight: '120px',
+      border: 'none',
+      minWidth: '100px',
     },
     cameraIcon: {
       fontSize: 'clamp(2rem, 5vw, 2.5rem)',
@@ -1079,32 +1002,16 @@ export default function TranslatePage() {
   return (
     <>
       <style jsx global>{`
-        @keyframes recordingPulse {
+        @keyframes pulse {
           0% {
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7), 0 8px 32px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(239, 68, 68, 0.4);
           }
           70% {
-            box-shadow: 0 0 0 30px rgba(239, 68, 68, 0), 0 8px 32px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 20px rgba(239, 68, 68, 0);
           }
           100% {
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), 0 8px 32px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(239, 68, 68, 0);
           }
-        }
-        
-        @keyframes gentlePulse {
-          0%, 100% {
-            transform: scale(1);
-            box-shadow: 0 8px 32px rgba(0, 102, 255, 0.4);
-          }
-          50% {
-            transform: scale(1.02);
-            box-shadow: 0 8px 40px rgba(0, 102, 255, 0.5);
-          }
-        }
-        
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
         }
       `}</style>
       <div style={styles.container}>
@@ -1227,35 +1134,27 @@ export default function TranslatePage() {
       </header>
 
       <main style={styles.main}>
-        {/* Przełącznik trybu - ukryty domyślnie */}
-        {showAdvancedMode && (
-          <div style={styles.modeSelector}>
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setConversationMode(false);
-              }}
-              style={{
-                ...styles.modeButton,
-                ...(conversationMode === false && styles.modeButtonActive)
-              }}
-            >
-              🎯 Tryb standardowy
-            </button>
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setConversationMode(true);
-              }}
-              style={{
-                ...styles.modeButton,
-                ...(conversationMode === true && styles.modeButtonActive)
-              }}
-            >
-              💬 Konwersacja
-            </button>
-          </div>
-        )}
+        {/* Przełącznik trybu */}
+        <div style={styles.modeSelector}>
+          <button
+            onClick={() => setConversationMode(false)}
+            style={{
+              ...styles.modeButton,
+              ...(conversationMode === false && styles.modeButtonActive)
+            }}
+          >
+            🎯 Tryb standardowy
+          </button>
+          <button
+            onClick={() => setConversationMode(true)}
+            style={{
+              ...styles.modeButton,
+              ...(conversationMode === true && styles.modeButtonActive)
+            }}
+          >
+            💬 Konwersacja
+          </button>
+        </div>
 
         {/* Wybór języków - różny dla każdego trybu */}
         {!conversationMode ? (
@@ -1263,7 +1162,6 @@ export default function TranslatePage() {
           <div style={styles.languageSelector}>
             <button
               onClick={() => {
-                triggerHaptic('light');
                 const newSource = sourceLang === 'pl' ? 'en' : sourceLang === 'en' ? 'fr' : 'pl';
                 if (newSource === targetLang) {
                   setTargetLang(sourceLang);
@@ -1280,7 +1178,6 @@ export default function TranslatePage() {
             
             <button
               onClick={() => {
-                triggerHaptic('light');
                 const newTarget = targetLang === 'en' ? 'fr' : targetLang === 'fr' ? 'pl' : 'en';
                 if (newTarget === sourceLang) {
                   setSourceLang(targetLang);
@@ -1295,7 +1192,6 @@ export default function TranslatePage() {
             
             <button
               onClick={() => {
-                triggerHaptic('medium');
                 const temp = sourceLang;
                 setSourceLang(targetLang);
                 setTargetLang(temp);
@@ -1368,26 +1264,13 @@ export default function TranslatePage() {
           }}
         >
           <div style={styles.micIcon}>
-            {isRecording ? (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                <span style={{ fontSize: '2rem', position: 'absolute' }}>🔴</span>
-                <span style={{ 
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  border: '4px solid white',
-                  borderRadius: '50%',
-                  animation: 'recordingPulse 1s infinite',
-                  opacity: 0.6
-                }}></span>
-              </span>
-            ) : '🎤'}
+            {isRecording ? '🔴' : '🎤'}
           </div>
           <div style={styles.buttonText(isRecording)}>
             {hasPermission === false ? 'Brak dostępu' : 
              isRecording ? `Nagrywam... ${recordingTime}s` : 
              isProcessing ? 'Przetwarzam...' : 
-             'Przytrzymaj i mów'}
+             'Nagrywaj'}
           </div>
         </button>
 
@@ -1422,21 +1305,7 @@ export default function TranslatePage() {
         </div>
 
         <div style={styles.status}>
-          {isProcessing && (
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              gap: '1rem' 
-            }}>
-              <span style={{ 
-                fontSize: '2.5rem', 
-                animation: 'spin 1s linear infinite',
-                display: 'inline-block'
-              }}>⚙️</span>
-              <span>Przetwarzam...</span>
-            </div>
-          )}
+          {isProcessing && 'Tłumaczę...'}
           {!isProcessing && !error && !lastTranslation && (
             <div>
               {conversationMode ? (
