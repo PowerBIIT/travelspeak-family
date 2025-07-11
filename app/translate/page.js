@@ -16,6 +16,11 @@ export default function TranslatePage() {
   const [offlinePhrases, setOfflinePhrases] = useState(null);
   const [lastAudioUrl, setLastAudioUrl] = useState(null);
   
+  // Nowe stany dla trybu konwersacji
+  const [conversationMode, setConversationMode] = useState(false);
+  const [conversationLangs, setConversationLangs] = useState(['pl', 'fr']);
+  const [detectedLanguage, setDetectedLanguage] = useState(null);
+  
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
@@ -177,17 +182,26 @@ export default function TranslatePage() {
   const processRecording = async (audioBlob) => {
     setIsProcessing(true);
     setError('');
+    setDetectedLanguage(null);
     
     try {
       // 1. Speech to text
       const formData = new FormData();
       formData.append('audio', audioBlob);
-      formData.append('language', sourceLang);
+      
+      if (conversationMode) {
+        // W trybie konwersacji - auto wykrywanie języka
+        formData.append('autoDetect', 'true');
+      } else {
+        // W trybie standardowym - określony język
+        formData.append('language', sourceLang);
+      }
       
       console.log('Sending audio to Whisper:', {
         blobSize: audioBlob.size,
         blobType: audioBlob.type,
-        language: sourceLang
+        mode: conversationMode ? 'conversation' : 'standard',
+        language: conversationMode ? 'auto-detect' : sourceLang
       });
       
       const whisperResponse = await fetch('/api/whisper', {
@@ -201,7 +215,27 @@ export default function TranslatePage() {
         throw new Error(errorData.error || 'Błąd rozpoznawania mowy');
       }
       
-      const { text } = await whisperResponse.json();
+      const whisperData = await whisperResponse.json();
+      const { text, detectedLanguage: detected } = whisperData;
+      
+      let actualSourceLang = sourceLang;
+      let actualTargetLang = targetLang;
+      
+      if (conversationMode && detected) {
+        // Ustaw wykryty język
+        setDetectedLanguage(detected);
+        actualSourceLang = detected;
+        
+        // Automatycznie wybierz język docelowy
+        if (conversationLangs.includes(detected)) {
+          // Znajdź drugi język z pary
+          actualTargetLang = conversationLangs.find(lang => lang !== detected);
+        } else {
+          // Jeśli wykryto język spoza pary, użyj pierwszego z pary jako domyślnego
+          console.warn(`Wykryto język ${detected} spoza wybranej pary`);
+          actualTargetLang = conversationLangs.find(lang => lang !== detected) || conversationLangs[0];
+        }
+      }
       
       // 2. Translation
       const translateResponse = await fetch('/api/translate', {
@@ -209,8 +243,8 @@ export default function TranslatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           text, 
-          from: sourceLang, 
-          to: targetLang
+          from: actualSourceLang, 
+          to: actualTargetLang
         }),
       });
       
@@ -223,12 +257,13 @@ export default function TranslatePage() {
       setLastTranslation({
         original: text,
         translated: translation,
-        from: sourceLang,
-        to: targetLang,
+        from: actualSourceLang,
+        to: actualTargetLang,
+        detectedLanguage: detected,
       });
       
       // 3. Text to speech
-      await playTranslation(translation, targetLang);
+      await playTranslation(translation, actualTargetLang);
       
     } catch (error) {
       console.error('Processing error:', error);
@@ -321,6 +356,57 @@ export default function TranslatePage() {
       marginBottom: '2rem',
       flexWrap: 'wrap',
       justifyContent: 'center',
+    },
+    modeSelector: {
+      display: 'flex',
+      gap: '1rem',
+      marginBottom: '1.5rem',
+      justifyContent: 'center',
+    },
+    modeButton: {
+      background: 'rgba(255, 255, 255, 0.2)',
+      color: 'white',
+      padding: '0.5rem 1rem',
+      borderRadius: '0.5rem',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
+      border: 'none',
+      backdropFilter: 'blur(8px)',
+    },
+    modeButtonActive: {
+      background: 'rgba(255, 255, 255, 0.9)',
+      color: '#1f2937',
+      fontWeight: 'bold',
+    },
+    conversationSelector: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      marginBottom: '2rem',
+      gap: '0.5rem',
+    },
+    conversationInfo: {
+      color: 'white',
+      fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
+      marginBottom: '0.5rem',
+    },
+    languagePair: {
+      display: 'flex',
+      gap: '0.5rem',
+      alignItems: 'center',
+    },
+    conversationArrow: {
+      fontSize: '1.5rem',
+      color: 'white',
+    },
+    detectedLanguage: {
+      marginTop: '0.5rem',
+      padding: '0.5rem 1rem',
+      background: 'rgba(34, 197, 94, 0.2)',
+      borderRadius: '0.5rem',
+      color: 'white',
+      fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
     },
     langButton: (isActive) => ({
       background: isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.3)',
@@ -558,7 +644,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.3.2</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.5.0</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -570,49 +656,114 @@ export default function TranslatePage() {
       </header>
 
       <main style={styles.main}>
-        <div style={styles.languageSelector}>
+        {/* Przełącznik trybu */}
+        <div style={styles.modeSelector}>
           <button
-            onClick={() => {
-              const newSource = sourceLang === 'pl' ? 'en' : sourceLang === 'en' ? 'fr' : 'pl';
-              if (newSource === targetLang) {
-                setTargetLang(sourceLang);
-              }
-              setSourceLang(newSource);
+            onClick={() => setConversationMode(false)}
+            style={{
+              ...styles.modeButton,
+              ...(conversationMode === false && styles.modeButtonActive)
             }}
-            style={styles.langButton(true)}
           >
-            <span style={styles.flag}>{languages[sourceLang].flag}</span>
-            <span style={styles.langName(true)}>{languages[sourceLang].name}</span>
+            🎯 Tryb standardowy
           </button>
-          
-          <div style={styles.arrow}>→</div>
-          
           <button
-            onClick={() => {
-              const newTarget = targetLang === 'en' ? 'fr' : targetLang === 'fr' ? 'pl' : 'en';
-              if (newTarget === sourceLang) {
-                setSourceLang(targetLang);
-              }
-              setTargetLang(newTarget);
+            onClick={() => setConversationMode(true)}
+            style={{
+              ...styles.modeButton,
+              ...(conversationMode === true && styles.modeButtonActive)
             }}
-            style={styles.langButton(true)}
           >
-            <span style={styles.flag}>{languages[targetLang].flag}</span>
-            <span style={styles.langName(true)}>{languages[targetLang].name}</span>
-          </button>
-          
-          <button
-            onClick={() => {
-              const temp = sourceLang;
-              setSourceLang(targetLang);
-              setTargetLang(temp);
-            }}
-            style={styles.swapButton}
-            title="Zamień języki"
-          >
-            ⇄
+            💬 Konwersacja
           </button>
         </div>
+
+        {/* Wybór języków - różny dla każdego trybu */}
+        {!conversationMode ? (
+          // Tryb standardowy - obecny interfejs
+          <div style={styles.languageSelector}>
+            <button
+              onClick={() => {
+                const newSource = sourceLang === 'pl' ? 'en' : sourceLang === 'en' ? 'fr' : 'pl';
+                if (newSource === targetLang) {
+                  setTargetLang(sourceLang);
+                }
+                setSourceLang(newSource);
+              }}
+              style={styles.langButton(true)}
+            >
+              <span style={styles.flag}>{languages[sourceLang].flag}</span>
+              <span style={styles.langName(true)}>{languages[sourceLang].name}</span>
+            </button>
+            
+            <div style={styles.arrow}>→</div>
+            
+            <button
+              onClick={() => {
+                const newTarget = targetLang === 'en' ? 'fr' : targetLang === 'fr' ? 'pl' : 'en';
+                if (newTarget === sourceLang) {
+                  setSourceLang(targetLang);
+                }
+                setTargetLang(newTarget);
+              }}
+              style={styles.langButton(true)}
+            >
+              <span style={styles.flag}>{languages[targetLang].flag}</span>
+              <span style={styles.langName(true)}>{languages[targetLang].name}</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                const temp = sourceLang;
+                setSourceLang(targetLang);
+                setTargetLang(temp);
+              }}
+              style={styles.swapButton}
+              title="Zamień języki"
+            >
+              ⇄
+            </button>
+          </div>
+        ) : (
+          // Tryb konwersacji - wybór pary języków
+          <div style={styles.conversationSelector}>
+            <div style={styles.conversationInfo}>
+              Rozmowa między:
+            </div>
+            <div style={styles.languagePair}>
+              <button
+                onClick={() => {
+                  const lang1 = conversationLangs[0];
+                  const nextLang = lang1 === 'pl' ? 'en' : lang1 === 'en' ? 'fr' : 'pl';
+                  setConversationLangs([nextLang, conversationLangs[1] === nextLang ? (nextLang === 'pl' ? 'en' : 'pl') : conversationLangs[1]]);
+                }}
+                style={styles.langButton(true)}
+              >
+                <span style={styles.flag}>{languages[conversationLangs[0]].flag}</span>
+                <span style={styles.langName(true)}>{languages[conversationLangs[0]].name}</span>
+              </button>
+              
+              <div style={styles.conversationArrow}>↔️</div>
+              
+              <button
+                onClick={() => {
+                  const lang2 = conversationLangs[1];
+                  const nextLang = lang2 === 'pl' ? 'en' : lang2 === 'en' ? 'fr' : 'pl';
+                  setConversationLangs([conversationLangs[0] === nextLang ? (nextLang === 'pl' ? 'en' : 'pl') : conversationLangs[0], nextLang]);
+                }}
+                style={styles.langButton(true)}
+              >
+                <span style={styles.flag}>{languages[conversationLangs[1]].flag}</span>
+                <span style={styles.langName(true)}>{languages[conversationLangs[1]].name}</span>
+              </button>
+            </div>
+            {detectedLanguage && (
+              <div style={styles.detectedLanguage}>
+                Wykryto: {languages[detectedLanguage]?.flag} {languages[detectedLanguage]?.name || detectedLanguage}
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           onMouseDown={startRecording}
@@ -649,7 +800,11 @@ export default function TranslatePage() {
           {isProcessing && 'Tłumaczę...'}
           {!isProcessing && !error && !lastTranslation && (
             <div>
-              Mów w języku: <strong>{languages[sourceLang].flag} {languages[sourceLang].name}</strong>
+              {conversationMode ? (
+                <>Mów w jednym z języków: <strong>{languages[conversationLangs[0]].flag} lub {languages[conversationLangs[1]].flag}</strong></>
+              ) : (
+                <>Mów w języku: <strong>{languages[sourceLang].flag} {languages[sourceLang].name}</strong></>
+              )}
             </div>
           )}
           {!isProcessing && !error && lastTranslation && 'Gotowe!'}

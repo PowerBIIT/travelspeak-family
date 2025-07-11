@@ -8,7 +8,8 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio');
-    const language = formData.get('language') || 'pl';
+    const language = formData.get('language'); // Może być null dla auto-detekcji
+    const autoDetect = formData.get('autoDetect') === 'true';
     
     if (!audioFile) {
       return NextResponse.json(
@@ -37,7 +38,7 @@ export async function POST(request) {
       size: audioBuffer.byteLength,
       type: mimeType,
       extension: extension,
-      language: language,
+      language: autoDetect ? 'auto-detect' : language,
       estimatedDuration: audioDurationSeconds.toFixed(1) + 's'
     });
     
@@ -49,8 +50,14 @@ export async function POST(request) {
       const openAIFormData = new FormData();
       openAIFormData.append('file', file);
       openAIFormData.append('model', modelName);
-      openAIFormData.append('language', language);
-      openAIFormData.append('response_format', 'json');
+      
+      // Tylko dodaj język jeśli nie jest auto-detect
+      if (!autoDetect && language) {
+        openAIFormData.append('language', language);
+      }
+      
+      // Użyj verbose_json dla auto-detekcji aby otrzymać wykryty język
+      openAIFormData.append('response_format', autoDetect ? 'verbose_json' : 'json');
       openAIFormData.append('temperature', '0'); // Deterministyczne dla spójności
       
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -97,16 +104,23 @@ export async function POST(request) {
     
     const latency = Date.now() - startTime;
     
+    // Wyciągnij wykryty język jeśli auto-detect
+    const detectedLanguage = autoDetect && data.language ? data.language : language;
+    
     console.log('Whisper API - Performance:', {
       model: modelUsed,
       latency: latency + 'ms',
       cost: '$' + estimatedCost.toFixed(4),
-      textLength: data.text.length
+      textLength: data.text.length,
+      detectedLanguage: autoDetect ? detectedLanguage : 'specified',
+      autoDetect: autoDetect
     });
     
     return NextResponse.json({
       text: data.text,
-      language: language,
+      language: detectedLanguage || language,
+      detectedLanguage: autoDetect ? detectedLanguage : null,
+      autoDetect: autoDetect,
       performance: {
         model: modelUsed,
         latencyMs: latency,
