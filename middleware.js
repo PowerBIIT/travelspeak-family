@@ -5,12 +5,28 @@ const FAMILY_PASSWORD = process.env.FAMILY_PASSWORD || 'travel2024';
 
 // Rate limiting configuration
 const rateLimitMap = new Map();
+// Rate limiting configuration from environment variables
 const RATE_LIMITS = {
-  '/api/translate': { requests: 50, window: 3600000 }, // 50 requests per hour
-  '/api/whisper': { requests: 30, window: 3600000 },   // 30 requests per hour
-  '/api/tts': { requests: 50, window: 3600000 },       // 50 requests per hour
-  '/api/ocr': { requests: 20, window: 3600000 },       // 20 requests per hour
-  '/api/auth': { requests: 5, window: 3600000 }        // 5 login attempts per hour
+  '/api/translate': { 
+    requests: parseInt(process.env.RATE_LIMIT_TRANSLATE || '200'), 
+    window: 3600000 
+  },
+  '/api/whisper': { 
+    requests: parseInt(process.env.RATE_LIMIT_WHISPER || '100'), 
+    window: 3600000 
+  },
+  '/api/tts': { 
+    requests: parseInt(process.env.RATE_LIMIT_TTS || '200'), 
+    window: 3600000 
+  },
+  '/api/ocr': { 
+    requests: parseInt(process.env.RATE_LIMIT_OCR || '50'), 
+    window: 3600000 
+  },
+  '/api/auth': { 
+    requests: parseInt(process.env.RATE_LIMIT_AUTH || '20'), 
+    window: 3600000 
+  }
 };
 
 // Cleanup old entries periodically

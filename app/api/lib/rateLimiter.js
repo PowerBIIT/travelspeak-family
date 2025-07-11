@@ -3,25 +3,25 @@
 
 const rateLimitStore = new Map();
 
-// Configuration for different endpoints
+// Configuration for different endpoints (with environment variable overrides)
 const ENDPOINT_LIMITS = {
   translate: {
-    requests: 50,
+    requests: parseInt(process.env.RATE_LIMIT_TRANSLATE || '200'),
     window: 3600000, // 1 hour
     cost: 0.004 // estimated cost per request
   },
   whisper: {
-    requests: 30,
+    requests: parseInt(process.env.RATE_LIMIT_WHISPER || '100'),
     window: 3600000,
     cost: 0.006 // estimated cost per request
   },
   tts: {
-    requests: 50,
+    requests: parseInt(process.env.RATE_LIMIT_TTS || '200'),
     window: 3600000,
     cost: 0.001 // estimated cost per request
   },
   ocr: {
-    requests: 20,
+    requests: parseInt(process.env.RATE_LIMIT_OCR || '50'),
     window: 3600000,
     cost: 0.01 // cost per image
   }
