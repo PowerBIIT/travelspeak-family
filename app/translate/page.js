@@ -618,13 +618,33 @@ export default function TranslatePage() {
       border: 'none',
       borderRadius: '0.5rem',
       padding: '0.75rem 1.25rem',
-      marginTop: '1rem',
       fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
       cursor: 'pointer',
       transition: 'all 0.2s',
       display: 'flex',
       alignItems: 'center',
       gap: '0.5rem',
+      justifyContent: 'center',
+    },
+    resetButton: {
+      background: '#ef4444',
+      color: 'white',
+      border: 'none',
+      borderRadius: '0.5rem',
+      padding: '0.75rem 1.25rem',
+      fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      justifyContent: 'center',
+    },
+    translationButtons: {
+      display: 'flex',
+      gap: '0.5rem',
+      marginTop: '1rem',
+      flexWrap: 'wrap',
       justifyContent: 'center',
     },
   };
@@ -646,7 +666,7 @@ export default function TranslatePage() {
       `}</style>
       <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.5.0</span></h1>
+        <h1 style={styles.title}>TravelSpeak Family <span style={{fontSize: '0.75rem', opacity: 0.7}}>v3.6.0</span></h1>
         <button 
           onClick={handleLogout}
           style={styles.logoutButton}
@@ -838,16 +858,34 @@ export default function TranslatePage() {
               <div style={styles.translationText}>
                 {lastTranslation.translated}
               </div>
-              {lastAudioUrl && (
+              <div style={styles.translationButtons}>
+                {lastAudioUrl && (
+                  <button
+                    onClick={replayAudio}
+                    style={styles.replayButton}
+                    onMouseEnter={(e) => e.target.style.background = '#3730a3'}
+                    onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+                  >
+                    🔊 Odtwórz ponownie
+                  </button>
+                )}
                 <button
-                  onClick={replayAudio}
-                  style={styles.replayButton}
-                  onMouseEnter={(e) => e.target.style.background = '#3730a3'}
-                  onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+                  onClick={() => {
+                    setLastTranslation(null);
+                    setError('');
+                    setDetectedLanguage(null);
+                    if (lastAudioUrl) {
+                      URL.revokeObjectURL(lastAudioUrl);
+                      setLastAudioUrl(null);
+                    }
+                  }}
+                  style={styles.resetButton}
+                  onMouseEnter={(e) => e.target.style.background = '#dc2626'}
+                  onMouseLeave={(e) => e.target.style.background = '#ef4444'}
                 >
-                  🔊 Odtwórz ponownie
+                  🔄 Wyczyść
                 </button>
-              )}
+              </div>
             </div>
           </div>
         )}
@@ -878,7 +916,8 @@ export default function TranslatePage() {
             {Object.entries(offlinePhrases).map(([category, phrases]) => (
               <div key={category}>
                 <h3 style={styles.categoryTitle}>
-                  {category === 'emergency' ? '🚨 Awaryjne' : 
+                  {category === 'child_safety' ? '👶 Bezpieczeństwo dzieci' :
+                   category === 'emergency' ? '🚨 Awaryjne' : 
                    category === 'transport' ? '🚌 Transport' : 
                    '💬 Podstawowe'}
                 </h3>

@@ -1,5 +1,109 @@
 export async function GET() {
   const phrases = {
+    child_safety: {
+      pl: {
+        "Zgubiłem się ale moi rodzice monitorują gdzie jestem więc zaraz powinni tu być": {
+          en: "I'm lost but my parents are tracking my location so they should be here soon",
+          fr: "Je suis perdu mais mes parents suivent ma position donc ils devraient arriver bientôt"
+        },
+        "Nazywam się ... i mam ... lat": {
+          en: "My name is ... and I am ... years old",
+          fr: "Je m'appelle ... et j'ai ... ans"
+        },
+        "Moi rodzice mówią po angielsku": {
+          en: "My parents speak English",
+          fr: "Mes parents parlent anglais"
+        },
+        "Telefon do mamy/taty": {
+          en: "Mom/Dad's phone number",
+          fr: "Numéro de téléphone de maman/papa"
+        },
+        "Proszę zadzwonić do moich rodziców": {
+          en: "Please call my parents",
+          fr: "S'il vous plaît appelez mes parents"
+        },
+        "Jestem z Polski": {
+          en: "I am from Poland",
+          fr: "Je viens de Pologne"
+        },
+        "Potrzebuję znaleźć moich rodziców": {
+          en: "I need to find my parents",
+          fr: "Je dois retrouver mes parents"
+        },
+        "Czy może mi Pan/Pani pomóc?": {
+          en: "Can you help me please?",
+          fr: "Pouvez-vous m'aider s'il vous plaît?"
+        }
+      },
+      en: {
+        "I'm lost but my parents are tracking my location so they should be here soon": {
+          pl: "Zgubiłem się ale moi rodzice monitorują gdzie jestem więc zaraz powinni tu być",
+          fr: "Je suis perdu mais mes parents suivent ma position donc ils devraient arriver bientôt"
+        },
+        "My name is ... and I am ... years old": {
+          pl: "Nazywam się ... i mam ... lat",
+          fr: "Je m'appelle ... et j'ai ... ans"
+        },
+        "My parents speak English": {
+          pl: "Moi rodzice mówią po angielsku",
+          fr: "Mes parents parlent anglais"
+        },
+        "Mom/Dad's phone number": {
+          pl: "Telefon do mamy/taty",
+          fr: "Numéro de téléphone de maman/papa"
+        },
+        "Please call my parents": {
+          pl: "Proszę zadzwonić do moich rodziców",
+          fr: "S'il vous plaît appelez mes parents"
+        },
+        "I am from Poland": {
+          pl: "Jestem z Polski",
+          fr: "Je viens de Pologne"
+        },
+        "I need to find my parents": {
+          pl: "Potrzebuję znaleźć moich rodziców",
+          fr: "Je dois retrouver mes parents"
+        },
+        "Can you help me please?": {
+          pl: "Czy może mi Pan/Pani pomóc?",
+          fr: "Pouvez-vous m'aider s'il vous plaît?"
+        }
+      },
+      fr: {
+        "Je suis perdu mais mes parents suivent ma position donc ils devraient arriver bientôt": {
+          pl: "Zgubiłem się ale moi rodzice monitorują gdzie jestem więc zaraz powinni tu być",
+          en: "I'm lost but my parents are tracking my location so they should be here soon"
+        },
+        "Je m'appelle ... et j'ai ... ans": {
+          pl: "Nazywam się ... i mam ... lat",
+          en: "My name is ... and I am ... years old"
+        },
+        "Mes parents parlent anglais": {
+          pl: "Moi rodzice mówią po angielsku",
+          en: "My parents speak English"
+        },
+        "Numéro de téléphone de maman/papa": {
+          pl: "Telefon do mamy/taty",
+          en: "Mom/Dad's phone number"
+        },
+        "S'il vous plaît appelez mes parents": {
+          pl: "Proszę zadzwonić do moich rodziców",
+          en: "Please call my parents"
+        },
+        "Je viens de Pologne": {
+          pl: "Jestem z Polski",
+          en: "I am from Poland"
+        },
+        "Je dois retrouver mes parents": {
+          pl: "Potrzebuję znaleźć moich rodziców",
+          en: "I need to find my parents"
+        },
+        "Pouvez-vous m'aider s'il vous plaît?": {
+          pl: "Czy może mi Pan/Pani pomóc?",
+          en: "Can you help me please?"
+        }
+      }
+    },
     emergency: {
       pl: {
         "Potrzebuję pomocy": {
